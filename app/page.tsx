@@ -9,13 +9,13 @@ export default function Home(){
   const screen=useRef<HTMLElement>(null),video=useRef<HTMLVideoElement>(null),canvas=useRef<HTMLCanvasElement>(null),fileInput=useRef<HTMLInputElement>(null);
   const compositor=useRef<Awaited<ReturnType<typeof createComposite>>|null>(null);
   const enabledRef=useRef(true);
-  const [ready,setReady]=useState(false),[playing,setPlaying]=useState(false),[started,setStarted]=useState(false),[time,setTime]=useState(8.8),[muted,setMuted]=useState(false),[original,setOriginal]=useState(false),[full,setFull]=useState(false),[error,setError]=useState('');
+  const [ready,setReady]=useState(false),[playing,setPlaying]=useState(false),[started,setStarted]=useState(false),[time,setTime]=useState(SOURCE_DURATION),[muted,setMuted]=useState(false),[original,setOriginal]=useState(false),[full,setFull]=useState(false),[error,setError]=useState('');
   const customAudio=useRef<HTMLAudioElement|null>(null),customUrl=useRef<string|null>(null);
   const [trackName,setTrackName]=useState('');
   useEffect(()=>{
     let stopped=false,raf=0,callback=0;
     const v=video.current!,c=canvas.current!;
-    const init=async()=>{try{const comp=await createComposite(c,v);if(stopped)return;compositor.current=comp;if(Math.abs(v.currentTime-8.8)>.01){const sought=new Promise<void>(resolve=>v.addEventListener('seeked',()=>resolve(),{once:true}));v.currentTime=8.8;await sought;}if(stopped)return;setTime(8.8);comp.draw(8.8);setReady(true);}catch{setError('No se pudo cargar la composición. Recarga para volver a intentarlo.');}};
+    const init=async()=>{try{const comp=await createComposite(c,v);if(stopped)return;compositor.current=comp;if(Math.abs(v.currentTime-SOURCE_DURATION)>.01){const sought=new Promise<void>(resolve=>v.addEventListener('seeked',()=>resolve(),{once:true}));v.currentTime=SOURCE_DURATION;await sought;}if(stopped)return;setTime(SOURCE_DURATION);comp.draw(SOURCE_DURATION);setReady(true);}catch{setError('No se pudo cargar la composición. Recarga para volver a intentarlo.');}};
     const draw=(_:number,info?:VideoFrameCallbackMetadata)=>{if(stopped)return;const t=info?.mediaTime??v.currentTime;compositor.current?.draw(t,enabledRef.current);setTime(t);if(v.requestVideoFrameCallback)callback=v.requestVideoFrameCallback(draw);else raf=requestAnimationFrame(draw);};
     if(v.readyState>=2)void init();else v.addEventListener('loadeddata',init,{once:true});
     if(v.requestVideoFrameCallback)callback=v.requestVideoFrameCallback(draw);else raf=requestAnimationFrame(draw);

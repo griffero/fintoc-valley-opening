@@ -61,6 +61,6 @@ export async function createComposite(canvas:HTMLCanvasElement,video:HTMLVideoEl
     hero(time);
     ctx.restore();
   }
-  draw(8.8);
+  draw(SOURCE_DURATION);
   return {draw};
 }
