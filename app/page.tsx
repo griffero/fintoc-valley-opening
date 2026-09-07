@@ -96,7 +96,7 @@ export default function Home(){
   const fullscreen=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await stage.current?.requestFullscreen();}catch{setFull(false);}};
   useEffect(()=>{const key=(e:KeyboardEvent)=>{if((e.target as HTMLElement).closest('button,input,[role="slider"],a'))return;if(e.code==='Space'){e.preventDefault();play();}if(e.key.toLowerCase()==='r')replay();if(e.key.toLowerCase()==='m')document.getElementById('sound-toggle')?.click();};window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);},[play,replay]);
   const uploadAudio=(file?:File)=>{if(!file)return;pause();if(localAudioUrl.current)URL.revokeObjectURL(localAudioUrl.current);localAudioUrl.current=URL.createObjectURL(file);const audio=new Audio(localAudioUrl.current);audio.onerror=()=>setAudioError('Este archivo no se puede leer. Usa MP3, WAV, M4A u OGG.');audio.onended=()=>{clock.current.playing=false;setPlaying(false);};localAudio.current=audio;setLocalTrack(file.name);setSound(true);clock.current.sound=true;setShowPlayer(false);setAudioError('');clock.current.time=0;setTime(0);};
-  const chapter=time<4.1?'01 / EL VALLE':time<6.3?'02 / FINT0C CRECE':time<9.5?'03 / TODO SE CONECTA':'04 / FINT0C VALLEY';
+  const chapter=time<4.1?'01 / EL VALLE':time<6.3?'02 / FINTOC CRECE':time<9.5?'03 / TODO SE CONECTA':'04 / FINTOC VALLEY';
   const finalOpacity=started?Math.max(0,Math.min(1,(time-9.7)/1.0)):0;
   return <main className="screen" ref={stage}>
     <header className="topbar">
@@ -106,7 +106,7 @@ export default function Home(){
     <section className="film" aria-label="Intro de Silicon Valley con Fintoc">
       <div className="canvas-host" ref={host}/>
       <div className="film-grain"/>
-      <div className="film-top"><span>SILICON VALLEY <span className="multiply">×</span> FINT0C</span><span className="coordinates">37°23′ N &nbsp; 122°05′ W</span></div>
+      <div className="film-top"><span>SILICON VALLEY <span className="multiply">×</span> FINTOC</span><span className="coordinates">37°23′ N &nbsp; 122°05′ W</span></div>
       {!ready&&!error&&<div className="loading"><LoaderCircle className="spin" size={24}/><span>Construyendo el valle…</span></div>}
       {error&&<div className="scene-error" role="alert">{error}<button onClick={()=>window.location.reload()}>Volver a intentar</button></div>}
       {ready&&!started&&!waiting&&<div className="opening-cue"><span className="cue-rule"/><span>EL VALLE TIENE UN NUEVO PROTAGONISTA</span></div>}
@@ -120,7 +120,7 @@ export default function Home(){
         <button className="icon-button" onClick={replay} disabled={!ready} title="Repetir (R)" aria-label="Repetir intro"><RotateCcw size={19}/></button>
         <span className="timer">{fmt(time)} <i>/ 00:12</i></span>
       </div>
-      <div className="timeline"><Slider min={0} max={12} step={.01} value={[time]} onValueChange={seek} aria-label="Posición de la intro"/><div className="timeline-labels"><span>EL VALLE</span><span>FINT0C</span><span>EL FUTURO</span></div></div>
+      <div className="timeline"><Slider min={0} max={12} step={.01} value={[time]} onValueChange={seek} aria-label="Posición de la intro"/><div className="timeline-labels"><span>EL VALLE</span><span>FINTOC</span><span>EL FUTURO</span></div></div>
       <div className="right-controls"><button id="sound-toggle" className="icon-button" onClick={toggleSound} title={sound?'Silenciar (M)':'Activar música original (M)'} aria-label={sound?'Silenciar música':'Activar música original'}>{sound?<Volume2 size={20}/>:<VolumeX size={20}/>}</button><button className="icon-button" onClick={fullscreen} aria-label={full?'Salir de pantalla completa':'Pantalla completa'} title="Pantalla completa">{full?<Minimize2 size={19}/>:<Maximize2 size={19}/>}</button></div>
     </footer>
     <div className="caption-row"><p><span className="blue-dot"/> Una pequeña ciudad. Un gran movimiento.</p><div><button onClick={()=>fileInput.current?.click()} className="audio-upload">{localTrack?`Audio: ${localTrack}`:'Cargar audio'}</button><span className="caption-divider">/</span><a href="https://www.youtube.com/watch?v=DNp1ullIXP4" target="_blank" rel="noreferrer">Referencia original <ArrowUpRight size={13}/></a></div></div>

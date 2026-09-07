@@ -121,7 +121,7 @@ export function createValley(host:HTMLElement) {
   // Batch static meshes by material, preserving the separate animated buildings.
   function batch(group:THREE.Object3D){
     const sets=new Map<THREE.Material,THREE.Mesh[]>();
-    for(const child of group.children){if(child instanceof THREE.Mesh && !(child instanceof THREE.InstancedMesh) && materials.has((child.material as THREE.MeshStandardMaterial).color?.getStyle?.() || ''))continue;
+    for(const child of group.children){
       if(child instanceof THREE.Mesh && !(child instanceof THREE.InstancedMesh) && child.material instanceof THREE.MeshStandardMaterial){const a=sets.get(child.material)||[];a.push(child);sets.set(child.material,a);}}
     for(const [material,meshes] of sets){if(meshes.length<2)continue;const geometries=meshes.map(m=>{m.updateMatrix();return m.geometry.clone().applyMatrix4(m.matrix);});const merged=mergeGeometries(geometries);if(merged){const m=new THREE.Mesh(merged,material);m.castShadow=true;m.receiveShadow=true;group.add(m);meshes.forEach(m=>group.remove(m));}geometries.forEach(g=>g.dispose());}
   }
