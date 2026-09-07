@@ -12,9 +12,11 @@ const smooth=(a:number,b:number,x:number)=>{const t=Math.max(0,Math.min(1,(x-a)/
 export async function createComposite(canvas:HTMLCanvasElement,video:HTMLVideoElement){
   canvas.width=1920;canvas.height=1080;
   const ctx=canvas.getContext('2d',{alpha:false})!;
-  const [track,logo]=await Promise.all([
+  const loadImage=(src:string)=>new Promise<HTMLImageElement>((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src=src;});
+  const [track,logo,lastFrame]=await Promise.all([
     fetch('/media/camera-track.json').then(r=>{if(!r.ok)throw new Error('Tracking data unavailable');return r.json() as Promise<Track>;}),
-    new Promise<HTMLImageElement>((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=reject;img.src='/assets/fintoc-logo-white.svg';})
+    loadImage('/assets/fintoc-logo-white.svg'),
+    loadImage('/media/final-frame.png')
   ]);
   function tint(color:string){const c=document.createElement('canvas');c.width=1128;c.height=240;const g=c.getContext('2d')!;g.drawImage(logo,0,0,1128,240);g.globalCompositeOperation='source-in';g.fillStyle=color;g.fillRect(0,0,1128,240);return c;}
   const ivory=tint('#e7ded0'),ivoryShade=tint('#8f887d'),ink=tint('#151b20'),inkSide=tint('#4a5355'),inkEdge=tint('#7e8583'),shadow=tint('#18201a');
@@ -44,9 +46,11 @@ export async function createComposite(canvas:HTMLCanvasElement,video:HTMLVideoEl
   }
   function draw(time:number,enabled=true){
     ctx.clearRect(0,0,1920,1080);
-    if(video.readyState>=2)ctx.drawImage(video,0,0,1920,1080);
+    // The source's final frame holds through the audio tail after video decoding ends.
+    if(time>=257/SOURCE_FPS||video.ended)ctx.drawImage(lastFrame,0,0,1920,1080);
+    else if(video.readyState>=2)ctx.drawImage(video,0,0,1920,1080);
     if(!enabled||time<5/SOURCE_FPS)return;
-    const frame=Math.round(time*SOURCE_FPS);
+    const frame=Math.min(256,Math.round(time*SOURCE_FPS));
     // The opening rooftop sign, before the original billboard is dismantled.
     if(time<2.96){ctx.save();transform('20',frame);ctx.globalAlpha=1-smooth(2.76,2.96,time);affineImage(navy,[1145,452],[205,99],[0,66],1200,420);ctx.restore();}
     // Fintoc's second campus occupies the billboard beside the title reveal.

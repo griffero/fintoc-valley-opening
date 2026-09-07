@@ -21,7 +21,7 @@ export default function Home(){
     if(v.requestVideoFrameCallback)callback=v.requestVideoFrameCallback(draw);else raf=requestAnimationFrame(draw);
     const seek=()=>{compositor.current?.draw(v.currentTime,enabledRef.current);setTime(v.currentTime);if(customAudio.current)customAudio.current.currentTime=v.currentTime;};
     const onPlay=()=>{setPlaying(true);setStarted(true);},onPause=()=>{setPlaying(false);customAudio.current?.pause();};
-    const onEnd=()=>{setPlaying(false);customAudio.current?.pause();};
+    const onEnd=()=>{setPlaying(false);setTime(SOURCE_DURATION);compositor.current?.draw(SOURCE_DURATION,enabledRef.current);customAudio.current?.pause();};
     const onFull=()=>setFull(Boolean(document.fullscreenElement));
     v.addEventListener('seeked',seek);v.addEventListener('play',onPlay);v.addEventListener('pause',onPause);v.addEventListener('ended',onEnd);document.addEventListener('fullscreenchange',onFull);
     return()=>{stopped=true;v.pause();v.removeEventListener('loadeddata',init);v.removeEventListener('seeked',seek);v.removeEventListener('play',onPlay);v.removeEventListener('pause',onPause);v.removeEventListener('ended',onEnd);document.removeEventListener('fullscreenchange',onFull);cancelAnimationFrame(raf);if(v.cancelVideoFrameCallback)v.cancelVideoFrameCallback(callback);customAudio.current?.pause();if(customUrl.current)URL.revokeObjectURL(customUrl.current);};
