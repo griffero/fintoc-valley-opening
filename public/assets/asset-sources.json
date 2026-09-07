@@ -1,0 +1,69 @@
+{
+  "retrieved": "2026-09-07",
+  "fintoc": {
+    "source": "https://www.fintoc.com/cl",
+    "source_type": "Inline SVG in official website navigation; exact path coordinates preserved.",
+    "files": [
+      "fintoc-logo.svg",
+      "fintoc-symbol.svg",
+      "fintoc-wordmark.svg"
+    ],
+    "variants": "-black.svg and -white.svg variants provided for standalone img use. Original files use currentColor.",
+    "extraction": "Logo untouched except removing page CSS class and aria-hidden. Symbol and wordmark separated at existing SVG subpath boundaries, preserving coordinates; viewBoxes adjusted to frame the matching parts.",
+    "rebranding_reference": "https://www.fintoc.com/cl/blog/del-codigo-al-diseno",
+    "launch_reference": "https://www.fintoc.com/mx/blog/rebranding",
+    "palette_observed_from_official_css": {
+      "brand_primary": "#080909",
+      "black": "#000000",
+      "white": "#FFFFFF",
+      "accent": "#057AFF",
+      "accent_hover": "#0054FF",
+      "blue_300": "#ADD9FF",
+      "blue_400": "#75BAFF",
+      "blue_700": "#0045D7",
+      "background_alt": "#F4F6F6",
+      "background_card": "#17191A"
+    },
+    "css_source": "https://www.fintoc.com/_next/static/css/20c7a34d43bd56e3.css?dpl=dpl_4nJohgCWgJdfRExSaUfjtiXmgixS",
+    "brand_details": "2024 symbol has four vertical rounded bars of increasing width. Wordmark is lowercase and derives from Chesna Grotesk according to official design article. Site UI currently uses DM Sans and DM Mono."
+  },
+  "other_assets": [
+    {
+      "file": "google.svg",
+      "source": "https://www.gstatic.com/marketing-cms/assets/images/f5/d3/a7f9db7045429cb6dc6be56bdcbe/google-logo-about.svg",
+      "source_page": "https://about.google/",
+      "modifications": "None"
+    },
+    {
+      "file": "apple.svg",
+      "source": "https://www.apple.com/",
+      "source_type": "Inline global navigation SVG, desktop Apple symbol",
+      "modifications": "Adjusted viewBox from 0 0 14 44 to 0 12 14 16 to remove navigation whitespace; currentColor fill; original path unchanged."
+    },
+    {
+      "file": "meta.svg",
+      "source": "https://static.xx.fbcdn.net/rsrc.php/y9/r/tL_v571NdZ0.svg",
+      "source_page": "https://about.meta.com/",
+      "source_type": "Declared Organization logo in official site JSON-LD",
+      "modifications": "None"
+    },
+    {
+      "file": "stripe.svg",
+      "source": "https://stripe.com/",
+      "source_type": "Inline main navigation Stripe logo SVG",
+      "modifications": "CSS variable fill replaced with currentColor; path unchanged."
+    },
+    {
+      "file": "aws.svg",
+      "source": "https://aws.amazon.com/",
+      "source_type": "Inline main navigation AWS logo SVG",
+      "modifications": "HTML viewbox normalized to SVG viewBox; inherited monochrome fill made explicit currentColor; path unchanged."
+    }
+  ],
+  "limitations": [
+    "Microsoft homepage timed out and no verified corporate SVG was obtained in the limited pass.",
+    "The Fintoc symbol and wordmark are separations of the actual official combined logo, not independently downloaded brand-kit files.",
+    "For external img rendering, currentColor defaults to black; use provided white Fintoc variants or CSS filters as appropriate.",
+    "No project files were edited."
+  ]
+}
