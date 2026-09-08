@@ -1,0 +1,40 @@
+[
+  {
+    "name": "Twitter bird",
+    "file": "twitter-bird.svg",
+    "source": "https://github.com/simple-icons/simple-icons/blob/9.0.0/icons/twitter.svg",
+    "download": "https://raw.githubusercontent.com/simple-icons/simple-icons/9.0.0/icons/twitter.svg",
+    "note": "Verified Simple Icons release 9.0.0. Original 2012\u20132023 bird geometry, filled blue #1DA1F2 here. Simple Icons released under CC0; brand trademark remains."
+  },
+  {
+    "name": "Facebook old wordmark",
+    "file": "facebook-wordmark.svg",
+    "extrusionFile": "facebook-lettering.svg",
+    "source": "https://commons.wikimedia.org/wiki/File:Facebook.svg",
+    "download": "https://upload.wikimedia.org/wikipedia/commons/0/06/Facebook.svg",
+    "note": "2005\u20132015 Facebook wordmark. Commons PD-textlogo, trademark noted. Derivative isolates original letter paths and colors them blue; removes blue backing rectangle and tiny registered-mark path."
+  },
+  {
+    "name": "YouTube old wordmark",
+    "file": "youtube-2013.svg",
+    "source": "https://commons.wikimedia.org/wiki/File:YouTube_Logo_(2013-2017).svg",
+    "download": "https://upload.wikimedia.org/wikipedia/commons/9/9e/YouTube_Logo_%282013-2017%29.svg",
+    "note": "Old YouTube logotype with red Tube enclosure, 3 paths. Commons PD-textlogo, trademark noted. Red enclosure uses knockout letter holes; works as extrusion, with pale backing needed for white Tube letters."
+  },
+  {
+    "name": "Yahoo old Y!",
+    "file": "yahoo-y.svg",
+    "extrusionFile": "yahoo-lettering.svg",
+    "source": "https://commons.wikimedia.org/wiki/File:Yahoo!_icon_(2009-2013).svg",
+    "download": "https://upload.wikimedia.org/wikipedia/commons/8/83/Yahoo%21_icon_%282009-2013%29.svg",
+    "note": "Older 2009\u20132013 serif Y! icon. Commons PD-shape, trademark noted. Raw icon includes oval around Y; derivative removes oval and preserves original Y and exclamation mark paths, colored purple."
+  },
+  {
+    "name": "HP 2012",
+    "file": "hp-2012.svg",
+    "simpleFile": "hp.svg",
+    "source": "https://commons.wikimedia.org/wiki/File:HP_logo_2012.svg",
+    "download": "https://upload.wikimedia.org/wikipedia/commons/a/ad/HP_logo_2012.svg",
+    "note": "2012 original blue round HP mark, sourced by Commons from HP materials. Commons PD-textlogo, trademark noted. Also supplied simple-icons 9.0.0 compact single-path equivalent hp.svg, CC0."
+  }
+]

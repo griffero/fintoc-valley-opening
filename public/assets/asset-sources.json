@@ -63,24 +63,13 @@
   "limitations": [
     "Microsoft homepage timed out and no verified corporate SVG was obtained in the limited pass.",
     "The Fintoc symbol and wordmark are separations of the actual official combined logo, not independently downloaded brand-kit files.",
-    "For external img rendering, currentColor defaults to black; use provided white Fintoc variants or CSS filters as appropriate.",
-    "No project files were edited."
+    "For external img rendering, currentColor defaults to black; use provided white Fintoc variants or CSS filters as appropriate."
   ],
   "opening_sequence": {
-    "source_page": "https://www.yuco.com/works/silicon-valley",
-    "studio": "yU+co",
-    "client": "HBO",
-    "version": "Season 1",
-    "original_file": "public/media/silicon-valley-original.mp4",
-    "original_vimeo_id": "194448629",
-    "retrieved": "2026-09-07",
-    "dimensions": [
-      1920,
-      1080
-    ],
-    "fps": "24000/1001",
-    "duration_seconds": 10.9,
-    "audio": "Original AAC soundtrack included in the studio-published video",
-    "composition": "Original clip preserved. Official Fintoc SVGs composited into camera-tracked signage and an extruded rooftop logo."
+    "reference_page": "https://www.yuco.com/works/silicon-valley",
+    "implementation": "All imagery is real-time Three.js geometry. The source footage is used only for visual/camera reference, not displayed in the renderer.",
+    "camera": "Scale 0.672 to 1.0, affine fixed point (3116,-1048), frame 0 to 183 at 24000/1001 fps; orthographic projection reconstructed in 3D.",
+    "soundtrack": "Original AAC audio extracted from the studio-published season 1 opening.",
+    "typeface": "Anton, SIL OFL 1.1, https://github.com/google/fonts/tree/main/ofl/anton"
   }
 }

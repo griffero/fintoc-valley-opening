@@ -1,0 +1,229 @@
+export type BuildingConfig = {
+  id: string;
+  name: string;
+  x: number;
+  z: number;
+  width: number;
+  depth: number;
+  height: number;
+  color: string;
+  visible: boolean;
+};
+export type ValleyConfig = {
+  version: 1;
+  palette: {
+    grass: string;
+    asphalt: string;
+    facade: string;
+    title: string;
+    fintoc: string;
+  };
+  camera: { azimuth: number; elevation: number; zoom: number };
+  lighting: {
+    sun: number;
+    ambient: number;
+    exposure: number;
+    occlusion: number;
+    elevation: number;
+  };
+  title: [string, string];
+  buildings: BuildingConfig[];
+};
+export const FILM_DURATION = 10.9;
+export const DEFAULT_CONFIG: ValleyConfig = {
+  version: 1,
+  palette: {
+    grass: '#456d16',
+    asphalt: '#292a27',
+    facade: '#e4d9c8',
+    title: '#ee172b',
+    fintoc: '#10191e',
+  },
+  camera: { azimuth: 36, elevation: 36, zoom: 1 },
+  lighting: {
+    sun: 3.6,
+    ambient: 0.45,
+    exposure: 1.08,
+    occlusion: 1.6,
+    elevation: 40,
+  },
+  title: ['SILICON', 'VALLEY'],
+  buildings: [
+    {
+      id: 'fintoc',
+      name: 'Sede Fintoc',
+      x: 14,
+      z: -13,
+      width: 19,
+      depth: 14,
+      height: 20,
+      color: '#e6ddce',
+      visible: true,
+    },
+    {
+      id: 'startup',
+      name: 'Fintoc · primera sede',
+      x: -14,
+      z: 116,
+      width: 22,
+      depth: 16,
+      height: 11,
+      color: '#e5dccb',
+      visible: true,
+    },
+    {
+      id: 'yahoo',
+      name: 'Yahoo',
+      x: -12,
+      z: -40,
+      width: 23,
+      depth: 17,
+      height: 20,
+      color: '#ded8ca',
+      visible: true,
+    },
+    {
+      id: 'hooli',
+      name: 'Hooli',
+      x: 30,
+      z: -40,
+      width: 21,
+      depth: 16,
+      height: 12,
+      color: '#d7c9b8',
+      visible: true,
+    },
+    {
+      id: 'hp',
+      name: 'HP · helipuerto',
+      x: 64,
+      z: 12,
+      width: 23,
+      depth: 18,
+      height: 14,
+      color: '#e5d9c5',
+      visible: true,
+    },
+    {
+      id: 'google',
+      name: 'Google · Blogger',
+      x: -28,
+      z: 50,
+      width: 23,
+      depth: 17,
+      height: 7,
+      color: '#e7dccb',
+      visible: true,
+    },
+    {
+      id: 'youtube',
+      name: 'YouTube',
+      x: -62,
+      z: 49,
+      width: 20,
+      depth: 16,
+      height: 9,
+      color: '#e8e0d0',
+      visible: true,
+    },
+    {
+      id: 'twitter',
+      name: 'Twitter',
+      x: 4,
+      z: 55,
+      width: 20,
+      depth: 15,
+      height: 9,
+      color: '#e6dac9',
+      visible: true,
+    },
+    {
+      id: 'campus',
+      name: 'Campus oeste',
+      x: -65,
+      z: 10,
+      width: 19,
+      depth: 17,
+      height: 7,
+      color: '#e1d4bf',
+      visible: true,
+    },
+    {
+      id: 'office',
+      name: 'Oficinas este',
+      x: 65,
+      z: -16,
+      width: 20,
+      depth: 16,
+      height: 11,
+      color: '#ded7c7',
+      visible: true,
+    },
+  ],
+};
+export const freshConfig = (): ValleyConfig => structuredClone(DEFAULT_CONFIG);
+export function readConfig(value: unknown): ValleyConfig {
+  const v = value as Partial<ValleyConfig>;
+  if (
+    !v ||
+    v.version !== 1 ||
+    !v.palette ||
+    !v.camera ||
+    !Array.isArray(v.buildings) ||
+    !Array.isArray(v.title) ||
+    v.title.length !== 2
+  )
+    throw new Error('Este archivo no es un proyecto de Fintoc Valley.');
+  const c = freshConfig(),
+    number = (x: unknown, min: number, max: number) =>
+      typeof x === 'number' && Number.isFinite(x)
+        ? Math.max(min, Math.min(max, x))
+        : undefined;
+  for (const key of Object.keys(
+    c.palette,
+  ) as (keyof ValleyConfig['palette'])[]) {
+    const col = v.palette[key];
+    if (typeof col === 'string' && /^#[0-9a-f]{6}$/i.test(col))
+      c.palette[key] = col;
+  }
+  for (const key of ['azimuth', 'elevation', 'zoom'] as const)
+    c.camera[key] =
+      number(
+        v.camera[key],
+        key === 'zoom' ? 0.5 : key === 'elevation' ? 15 : 0,
+        key === 'zoom' ? 2 : key === 'elevation' ? 75 : 360,
+      ) ?? c.camera[key];
+  if (v.lighting)
+    for (const key of [
+      'sun',
+      'ambient',
+      'exposure',
+      'occlusion',
+      'elevation',
+    ] as const)
+      c.lighting[key] =
+        number(
+          v.lighting[key],
+          key === 'elevation' ? 15 : 0,
+          key === 'elevation' ? 80 : key === 'exposure' ? 2 : 6,
+        ) ?? c.lighting[key];
+  c.title = v.title.map((s) => String(s).slice(0, 12).toUpperCase()) as [
+    string,
+    string,
+  ];
+  for (const b of c.buildings) {
+    const input = v.buildings.find((x: BuildingConfig) => x.id === b.id);
+    if (!input) continue;
+    for (const key of ['x', 'z', 'width', 'depth', 'height'] as const)
+      b[key] =
+        number(
+          input[key],
+          key === 'x' || key === 'z' ? -120 : 3,
+          key === 'x' || key === 'z' ? 120 : 45,
+        ) ?? b[key];
+    if (typeof input.color === 'string' && /^#[0-9a-f]{6}$/i.test(input.color))
+      b.color = input.color;
+    if (typeof input.visible === 'boolean') b.visible = input.visible;
+  }
+  return c;
+}

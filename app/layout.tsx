@@ -14,7 +14,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'Silicon Valley × Fintoc',
-  description: 'La intro original de Silicon Valley, con Fintoc integrado en la ciudad y su música original.',
+  description:
+    'Una escena 3D editable inspirada en Silicon Valley, con Fintoc, cámaras animadas y exportación GLB.',
   icons: { icon: '/assets/fintoc-symbol.svg' },
 };
 
