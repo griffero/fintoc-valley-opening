@@ -684,10 +684,23 @@ export default function Home() {
                   <div className="panel-intro">
                     <h2>Iluminación</h2>
                     <p>
-                      Luz cálida de tarde, relleno del cielo y sombras de
-                      contacto entre los objetos.
+                      El sol recorre la ciudad durante la intro. Las sombras y
+                      el color de la luz cambian con el paso del día.
                     </p>
                   </div>
+                  <Range
+                    label="Recorrido del sol"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={config.lighting.timeLapse}
+                    onChange={(timeLapse) =>
+                      setConfig((c) => ({
+                        ...c,
+                        lighting: { ...c.lighting, timeLapse },
+                      }))
+                    }
+                  />
                   <Range
                     label="Luz del sol"
                     min={0}

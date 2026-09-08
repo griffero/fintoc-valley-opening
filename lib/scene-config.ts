@@ -25,6 +25,7 @@ export type ValleyConfig = {
     exposure: number;
     occlusion: number;
     elevation: number;
+    timeLapse: number;
   };
   title: [string, string];
   buildings: BuildingConfig[];
@@ -46,6 +47,7 @@ export const DEFAULT_CONFIG: ValleyConfig = {
     exposure: 1.08,
     occlusion: 1.6,
     elevation: 40,
+    timeLapse: 1,
   },
   title: ['SILICON', 'VALLEY'],
   buildings: [
@@ -200,12 +202,19 @@ export function readConfig(value: unknown): ValleyConfig {
       'exposure',
       'occlusion',
       'elevation',
+      'timeLapse',
     ] as const)
       c.lighting[key] =
         number(
           v.lighting[key],
           key === 'elevation' ? 15 : 0,
-          key === 'elevation' ? 80 : key === 'exposure' ? 2 : 6,
+          key === 'elevation'
+            ? 80
+            : key === 'exposure'
+              ? 2
+              : key === 'timeLapse'
+                ? 1
+                : 6,
         ) ?? c.lighting[key];
   c.title = v.title.map((s) => String(s).slice(0, 12).toUpperCase()) as [
     string,

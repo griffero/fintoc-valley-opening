@@ -12,6 +12,7 @@ import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { DEFAULT_CONFIG, type ValleyConfig } from './scene-config';
 import { createCityLife, createMotion } from './city-life';
+import { sampleDaylight } from './solar-motion';
 
 const smooth = (a: number, b: number, t: number) => {
   const p = THREE.MathUtils.clamp((t - a) / (b - a), 0, 1);
@@ -105,7 +106,11 @@ export async function createEditableValley(
   );
   scene.add(ambient);
   const sun = new THREE.DirectionalLight('#ffe3ba', config.lighting.sun);
-  sun.position.set(-60, 120, 65);
+  const sunRig = new THREE.Group();
+  sunRig.name = 'Time-lapse sun · morning to afternoon';
+  sun.position.set(0, 0, 0);
+  sun.target.position.set(0, 0, -1);
+  sunRig.add(sun, sun.target);
   sun.castShadow = true;
   sun.shadow.mapSize.set(4096, 4096);
   Object.assign(sun.shadow.camera, {
@@ -118,8 +123,8 @@ export async function createEditableValley(
   sun.shadow.normalBias = 0.09;
   sun.shadow.bias = -0.00008;
   sun.shadow.radius = 2;
-  sun.name = 'Afternoon sun';
-  scene.add(sun, sun.target);
+  sun.name = 'Moving daylight';
+  scene.add(sunRig);
   const fill = new THREE.DirectionalLight('#a8c4e8', 0.28);
   fill.position.set(90, 40, -80);
   fill.name = 'Cool sky fill';
@@ -1079,7 +1084,8 @@ export async function createEditableValley(
     axis: i % 2,
     lane: i % 2 ? xRoads[i % xRoads.length] : zRoads[i % zRoads.length],
     phase: rand(),
-    speed: 4 + rand() * 5,
+    // Match the source's time-lapse traffic: roughly 180–280 px/s at 1080p.
+    speed: 14 + rand() * 10,
     direction: i % 3 === 0 ? -1 : 1,
     bridge: i > 55,
   }));
@@ -1198,12 +1204,6 @@ export async function createEditableValley(
     sun.intensity = config.lighting.sun;
     renderer.toneMappingExposure = config.lighting.exposure;
     ao.blendIntensity = config.lighting.occlusion;
-    const se = THREE.MathUtils.degToRad(config.lighting.elevation);
-    sun.position.set(
-      -Math.cos(se) * 100,
-      Math.sin(se) * 145,
-      Math.cos(se) * 95,
-    );
     roadMat.color.set(config.palette.asphalt);
     genericFacade.color.set(config.palette.facade);
     titleMat.color.set(config.palette.title);
@@ -1311,18 +1311,17 @@ export async function createEditableValley(
       const b = buildings.find((b) => b.id === selected);
       if (b) selection.setFromObject(b.group);
     }
-    const sunAngle = THREE.MathUtils.degToRad(config.lighting.elevation);
-    sun.target.position.copy(controls.target);
-    sun.position
-      .copy(controls.target)
-      .add(
-        new THREE.Vector3(
-          -Math.cos(sunAngle) * 100,
-          Math.sin(sunAngle) * 145,
-          Math.cos(sunAngle) * 95,
-        ),
-      );
-    sun.target.updateMatrixWorld();
+    const daylight = sampleDaylight(
+      t,
+      config.lighting.elevation,
+      config.lighting.timeLapse,
+    );
+    sunRig.position.copy(controls.target).add(daylight.offset);
+    sunRig.quaternion.copy(daylight.rotation);
+    sun.color.copy(daylight.color);
+    sun.intensity = config.lighting.sun * daylight.sunFactor;
+    ambient.intensity = config.lighting.ambient * daylight.ambientFactor;
+    sunRig.updateMatrixWorld(true);
     composer.render();
   }
   function resize() {
@@ -1419,6 +1418,19 @@ export async function createEditableValley(
       );
       tracks.push(...motion.bake(samples));
       tracks.push(
+        new THREE.QuaternionKeyframeTrack(
+          sunRig.uuid + '.quaternion',
+          samples,
+          samples.flatMap((t) =>
+            sampleDaylight(
+              t,
+              config.lighting.elevation,
+              config.lighting.timeLapse,
+            ).rotation.toArray(),
+          ),
+        ),
+      );
+      tracks.push(
         new THREE.VectorKeyframeTrack(
           helicopter.uuid + '.position',
           samples,
@@ -1435,7 +1447,7 @@ export async function createEditableValley(
         tracks,
       );
       const exporter = new GLTFExporter();
-      const file = await exporter.parseAsync([world, sun, fill], {
+      const file = await exporter.parseAsync([world, sunRig, fill], {
         binary: true,
         onlyVisible: true,
         trs: true,
