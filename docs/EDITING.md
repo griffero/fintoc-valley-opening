@@ -17,6 +17,7 @@ The viewport is a real Three.js scene. Buildings, lettering, roads, cars, trees,
 - `lib/scene-config.ts`: defaults and validated project format.
 - `lib/editable-valley.ts`: geometry builders, logo extrusion, city generation, lighting, camera motion, scene animation and GLB export.
 - `lib/city-life.ts`: curved and stepped campuses, balloon profiles and wrapped emblems, lattice cranes, excavators, construction yards, tents, rooftop activity, mixer truck and historical billboards. Coordinates, dimensions, colors and timing are editable here. `createMotion` drives both timeline seeking and exported position/rotation/scale tracks.
+- `lib/coffee-kiosk.ts`: think coffee stand at x=33, z=-16, beside the final headquarters. The counter, canopy, espresso machine, cups, seating and serving barista are separate 3D parts. The user-supplied PNG was traced to SVG paths; the brain and lettering are extruded geometry, retained as editable meshes in GLB export. The original PNG remains alongside the SVG for reference.
 - `lib/fintoc-hq.ts`: Cerro El Plomo 5420, reconstructed from the three supplied references: stepped glass tower, white fins, triangular setback terrace with a matching diagonal lower facade, two parasols, planters, roof equipment and waving guests. All are editable geometry.
 - `lib/outdoor-materials.ts`: explicit glass/masonry/metal roles and a procedural outdoor sky environment.
 - `lib/task-motion.ts`: deterministic machinery task cycles with moves and holds.

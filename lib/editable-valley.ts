@@ -13,6 +13,7 @@ import { DEFAULT_CONFIG, type ValleyConfig } from './scene-config';
 import { createCityLife, createMotion } from './city-life';
 import { sampleDaylight } from './solar-motion';
 import { createFintocHQ } from './fintoc-hq';
+import { createCoffeeKiosk } from './coffee-kiosk';
 import {
   createSurface,
   outdoorEnvironment,
@@ -61,6 +62,7 @@ export async function createEditableValley(
     'youtube-2013',
     'yahoo-lettering',
     'hp',
+    'think-logo',
   ];
   const svgs = new Map<string, ReturnType<SVGLoader['parse']>>();
   await Promise.all(
@@ -794,6 +796,13 @@ export async function createEditableValley(
     }
     batch(g);
   }
+  const coffeeSite = createCoffeeKiosk(
+    world,
+    sculpture('think-logo', 2.86, 0.028, '#111411'),
+    { mat, box, mesh, batch, person },
+    motion,
+  );
+  occupied.push(coffeeSite);
   occupied.push(
     ...createCityLife(
       world,
@@ -1127,6 +1136,11 @@ export async function createEditableValley(
     for (let z = -52; z < 100; z += 4.2) {
       if (zRoads.some((r) => Math.abs(z - r) < 5)) continue;
       if (Math.abs(x - avenueX(z)) < 4.8) continue;
+      if (
+        Math.abs(x - coffeeSite.x) < coffeeSite.w / 2 + 2 &&
+        Math.abs(z - coffeeSite.z) < coffeeSite.d / 2 + 2
+      )
+        continue;
       treePositions.push({ x, z, s: 1 });
     }
   const crowns = new THREE.InstancedMesh(
