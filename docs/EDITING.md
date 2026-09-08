@@ -17,7 +17,7 @@ The viewport is a real Three.js scene. Buildings, lettering, roads, cars, trees,
 - `lib/scene-config.ts`: defaults and validated project format.
 - `lib/editable-valley.ts`: geometry builders, logo extrusion, city generation, lighting, camera motion, scene animation and GLB export.
 - `lib/city-life.ts`: curved and stepped campuses, balloon profiles and wrapped emblems, lattice cranes, excavators, construction yards, tents, rooftop activity, mixer truck and historical billboards. Coordinates, dimensions, colors and timing are editable here. `createMotion` drives both timeline seeking and exported position/rotation/scale tracks.
-- `lib/fintoc-hq.ts`: Cerro El Plomo 5420, reconstructed from the three supplied references: stepped glass tower, white fins, occupied setback terrace, two parasols, planters, roof equipment and waving guests. All are editable geometry.
+- `lib/fintoc-hq.ts`: Cerro El Plomo 5420, reconstructed from the three supplied references: stepped glass tower, white fins, triangular setback terrace with a matching diagonal lower facade, two parasols, planters, roof equipment and waving guests. All are editable geometry.
 - `lib/outdoor-materials.ts`: explicit glass/masonry/metal roles and a procedural outdoor sky environment.
 - `lib/task-motion.ts`: deterministic machinery task cycles with moves and holds.
 - `docs/VISUAL-AUDIT.md`: observations, measurements, implemented changes and remaining differences from the original.
@@ -56,3 +56,5 @@ Title floors are independent rigid groups. Each appears at its own exact timelin
 The final headquarters rises by translation from below the terrain, preserving the proportions of its facade and terrace. It is an artistic emergence, not a simulation of that building’s real construction. The selected height/width/depth still scale the final model normally. Rooftop guests retain independently animated arms and bodies.
 
 The exported animation uses a common ancestor for geometry and lights so the sun rotation track resolves correctly. Tracks of user-hidden buildings are filtered out. The export includes current vehicle and short-trail geometry; traffic motion itself remains procedural in the web project. Sky environment, haze, exposure, color-changing construction ground, audio and postprocessing should be recreated when opening the GLB in another renderer.
+
+The final headquarters has one Fintoc wordmark on the upper roof. Its terrace narrows to a tip at the left and widens toward the two parasols at the right, as in the supplied aerial views. The deck, glazing, handrails, lower facade and furniture follow this triangular footprint.

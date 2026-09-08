@@ -13,7 +13,7 @@ Fecha: 7 de septiembre de 2026. Objetivo: acercar la arquitectura, la respuesta 
 
 | Área | Diferencia encontrada | Cambio realizado |
 | --- | --- | --- |
-| Sede final | El bloque genérico no representaba la oficina real ni su terraza. | Torre de vidrio verde, volumen frontal más bajo, aletas blancas, terraza retranqueada con dos sombrillas, jardineras, bar y diez personas celebrando. Cubierta técnica con borde y recorrido redondeado. |
+| Sede final | El bloque genérico no representaba la oficina real ni su terraza. | Torre de vidrio verde, volumen frontal más bajo, aletas blancas, terraza triangular retranqueada con fachada inferior diagonal, dos sombrillas, jardineras, bar y diez personas celebrando. Cubierta técnica con borde y recorrido redondeado. Un único letrero Fintoc sobre la cubierta. |
 | Vidrios | Solo dos colores exactos recibían propiedades de vidrio; otros paños se comportaban como mampostería mate. | Materiales elegidos por función, tintes de paños distintos y reflejos amplios de cielo y horizonte. Se reemplazó el entorno interior de reflexión. |
 | Techos del título | El rojo usaba un material que ignoraba el sol. Faltaba espesor legible en el borde. | Material iluminado, remate rojo con bisel fino y fascia oscura. Ajuste de reflectancia para conservar la saturación bajo ACES. |
 | Fachadas y masa | Las letras y el vecindario repetían demasiado la misma caja y patrón de ventanas. | Letras algo más altas, fachadas con distintas proporciones de vidrio y montantes. Cinco variantes de edificios secundarios: patio en L, escalonado, torre sobre podio, estudio bajo y bloque de bandas. |

@@ -697,9 +697,6 @@ export async function createEditableValley(
       logo.position.set(0, anchors.roof.y, anchors.roof.z);
       g.add(logo);
       logoPieces(logo, 4.9);
-      const small = sculpture('fintoc-logo', 7.5, 0.12, '#e8eee6');
-      small.position.set(-1.5, anchors.facade.y, anchors.facade.z);
-      g.add(small);
     }
     if (b.id === 'startup') {
       const logo = sculpture('old-fintoc-logo', 17, 0.65, undefined, true);

@@ -38,8 +38,59 @@ export function createFintocHQ(
     h = dimensions.height;
   const terraceY = h * 0.825,
     setback = d * 0.31;
-  const front = d / 2,
-    crownFront = front - setback;
+  const crownFront = d / 2 - setback;
+  // The aerial references show a triangular wing: tip at left, parasols at right.
+  const tipX = -w / 2,
+    wideX = w * 0.36;
+  const terraceWidth = wideX - tipX,
+    terraceDepth = terraceWidth * 0.27;
+  const frontAt = (x: number) =>
+    crownFront + terraceDepth * ((x - tipX) / terraceWidth);
+  const tip = new THREE.Vector2(tipX, crownFront);
+  const innerCorner = new THREE.Vector2(wideX, crownFront);
+  const outerCorner = new THREE.Vector2(wideX, crownFront + terraceDepth);
+  const frontAngle = -Math.atan2(terraceDepth, terraceWidth);
+  function wedge(depth: number) {
+    const shape = new THREE.Shape();
+    shape.moveTo(tip.x, -tip.y);
+    shape.lineTo(innerCorner.x, -innerCorner.y);
+    shape.lineTo(outerCorner.x, -outerCorner.y);
+    shape.closePath();
+    const geometry = new THREE.ExtrudeGeometry(shape, {
+      depth,
+      bevelEnabled: false,
+    });
+    geometry.rotateX(-Math.PI / 2);
+    return geometry;
+  }
+  function edgeBox(
+    target: THREE.Object3D,
+    a: THREE.Vector2,
+    b: THREE.Vector2,
+    along: number,
+    y: number,
+    width: number,
+    height: number,
+    thickness: number,
+    material: string | THREE.Material,
+    outward = 0,
+  ) {
+    const dx = b.x - a.x,
+      dz = b.y - a.y,
+      length = Math.hypot(dx, dz);
+    const item = box(
+      target,
+      a.x + dx * along - (dz / length) * outward,
+      y,
+      a.y + dz * along + (dx / length) * outward,
+      width,
+      height,
+      thickness,
+      material,
+    );
+    item.rotation.y = -Math.atan2(dz, dx);
+    return item;
+  }
   const ivory = '#e9eee7',
     frame = '#b9cdc7';
   const glass = new THREE.MeshPhysicalMaterial({
@@ -72,23 +123,14 @@ export function createFintocHQ(
   plinth.name = 'Fintoc · entrance plaza';
   parent.add(plinth);
   box(plinth, 0, 0.05, 0, w + 2, 0.2, d + 2, '#cbc9ba');
-  box(plinth, 0, 0.25, 0, w - 0.8, 1.5, d - 0.8, '#304e48');
   for (let x = -w / 2; x <= w / 2; x += 2.4)
-    box(plinth, x, 0.2, front + 0.55, 1.6, 0.055, 0.65, '#b5bdb4');
+    box(plinth, x, 0.2, frontAt(x) + 0.55, 1.6, 0.055, 0.65, '#b5bdb4');
 
   // A full-height rear slab and a shallower, lower projecting front volume.
   const coreDepth = d - setback;
   box(parent, 0, 0.3, -setback / 2, w, h - 0.3, coreDepth, glass);
-  box(
-    parent,
-    -w * 0.07,
-    0.3,
-    front - setback / 2,
-    w * 0.86,
-    terraceY - 0.3,
-    setback,
-    glass,
-  );
+  mesh(parent, wedge(terraceY - 0.3), glass, 0, 0.3, 0).name =
+    'Fintoc · triangular lower wing';
   const stories = 14,
     step = (h - 0.38) / stories,
     cols = 14;
@@ -152,151 +194,134 @@ export function createFintocHQ(
         frame,
       );
 
-  // The photographed curtain wall stays green; irregular white vertical fins
-  // borrow the stronger hierarchy visible in the user's architectural render.
-  const faceW = w * 0.86,
-    faceX = -w * 0.07;
-  for (let floor = 0; floor < 12; floor++) {
-    const y = 0.35 + (floor * (terraceY - 0.35)) / 12;
-    box(parent, faceX, y, front + 0.04, faceW, 0.055, 0.075, frame);
-    for (let col = 0; col < 12; col++) {
-      const x = faceX - faceW / 2 + ((col + 0.5) * faceW) / 12;
-      box(
-        parent,
-        x,
-        y + 0.065,
-        front + 0.018,
-        faceW / 12 - 0.065,
-        (terraceY - 0.35) / 12 - 0.09,
-        0.03,
-        panes[(col + floor * 2) % 5],
-      );
+  // Both exposed walls follow the triangular footprint, including the white fins.
+  for (const [a, b] of [
+    [tip, outerCorner],
+    [outerCorner, innerCorner],
+  ]) {
+    const length = a.distanceTo(b),
+      bays = Math.max(3, Math.round(length / 1.05));
+    for (let floor = 0; floor < 12; floor++) {
+      const y = 0.35 + (floor * (terraceY - 0.35)) / 12;
+      edgeBox(parent, a, b, 0.5, y, length, 0.055, 0.075, frame, 0.04);
+      for (let bay = 0; bay < bays; bay++)
+        edgeBox(
+          parent,
+          a,
+          b,
+          (bay + 0.5) / bays,
+          y + 0.065,
+          length / bays - 0.065,
+          (terraceY - 0.35) / 12 - 0.09,
+          0.03,
+          panes[(bay + floor * 2) % 5],
+          0.02,
+        );
     }
-  }
-  for (let col = 0; col <= 12; col++) {
-    const x = faceX - faceW / 2 + (col * faceW) / 12;
-    box(
-      parent,
-      x,
-      0.35,
-      front + 0.13,
-      col === 0 || col === 12 ? 0.34 : col % 3 === 0 ? 0.24 : 0.1,
-      terraceY - 0.35,
-      0.26,
-      col % 3 === 0 ? facade : ivory,
-    );
-    if (col > 0 && col < 12 && col % 3 !== 0) {
-      const start = (col % 4) * step * 2 + 0.5;
-      box(
+    for (let bay = 0; bay <= bays; bay++) {
+      edgeBox(
         parent,
-        x,
-        start,
-        front + 0.19,
-        0.23,
-        step * (col % 2 ? 4 : 3),
-        0.25,
-        ivory,
+        a,
+        b,
+        bay / bays,
+        0.35,
+        bay === 0 || bay === bays ? 0.24 : bay % 3 === 0 ? 0.2 : 0.1,
+        terraceY - 0.35,
+        0.2,
+        bay % 3 === 0 ? facade : ivory,
+        0.09,
       );
+      if (bay > 0 && bay < bays && bay % 3 !== 0)
+        edgeBox(
+          parent,
+          a,
+          b,
+          bay / bays,
+          (bay % 4) * step * 2 + 0.5,
+          0.2,
+          step * (bay % 2 ? 4 : 3),
+          0.22,
+          ivory,
+          0.13,
+        );
     }
-  }
-  for (const side of [-1, 1])
-    box(
+    edgeBox(
       parent,
-      faceX + (side * faceW) / 2,
-      0.35,
-      front - setback / 2,
+      a,
+      b,
+      0.5,
+      terraceY - 0.2,
+      length + 0.1,
       0.22,
-      terraceY - 0.35,
-      setback + 0.2,
-      facade,
+      0.22,
+      ivory,
+      0.07,
     );
-  box(
-    parent,
-    faceX,
-    terraceY - 0.22,
-    front + 0.12,
-    faceW + 0.3,
-    0.3,
-    0.32,
-    ivory,
-  );
-  // Recessed street entry and the fine circular entrance canopy.
-  box(plinth, 0, 0.3, front + 0.17, 2.8, 2.15, 0.08, '#304b47');
+  }
+  // The entrance sits on the same diagonal as the lower facade.
+  const entry = new THREE.Group();
+  entry.position.set(0, 0, frontAt(0));
+  entry.rotation.y = frontAngle;
+  plinth.add(entry);
+  box(entry, 0, 0.3, 0.17, 2.8, 2.15, 0.08, '#304b47');
   for (const x of [-1.45, 0, 1.45])
-    box(plinth, x, 0.3, front + 0.25, 0.075, 2.15, 0.1, ivory);
+    box(entry, x, 0.3, 0.25, 0.075, 2.15, 0.1, ivory);
   const canopy = mesh(
-    plinth,
+    entry,
     new THREE.CylinderGeometry(1.65, 1.65, 0.1, 30, 1, false, 0, Math.PI),
     mat('#c8d8d0'),
     0,
     2.65,
-    front + 0.1,
+    0.1,
   );
   canopy.rotation.y = Math.PI / 2;
+  batch(entry);
   batch(plinth);
 
   const terrace = new THREE.Group();
-  terrace.name = 'Fintoc · setback rooftop terrace';
+  terrace.name = 'Fintoc · triangular rooftop terrace';
   terrace.position.y = terraceY;
   parent.add(terrace);
-  box(
-    terrace,
-    faceX,
-    0,
-    front - setback / 2,
-    faceW + 0.3,
-    0.18,
-    setback + 0.2,
-    '#d6d0bb',
-  );
-  for (let x = faceX - faceW / 2 + 0.15; x < faceX + faceW / 2; x += 0.42)
+  mesh(terrace, wedge(0.18), mat('#d6d0bb'));
+  // Shorter boards toward the pointed end, all clipped to the same diagonal.
+  for (let x = tipX + 0.6; x < wideX - 0.25; x += 0.42) {
+    const boardDepth = frontAt(x - 0.18) - crownFront - 0.2;
+    if (boardDepth <= 0) continue;
     box(
       terrace,
       x,
       0.185,
-      front - setback / 2,
+      crownFront + 0.1 + boardDepth / 2,
       0.36,
       0.02,
-      setback - 0.16,
+      boardDepth,
       '#c8b99a',
     );
-  box(
-    terrace,
-    faceX,
-    0.2,
-    front + 0.15,
-    faceW + 0.25,
-    0.95,
-    0.05,
-    balconyGlass,
-  );
-  box(terrace, faceX, 1.12, front + 0.16, faceW + 0.4, 0.06, 0.09, '#b2bdb3');
-  for (let x = faceX - faceW / 2; x <= faceX + faceW / 2 + 0.1; x += 1.65)
-    box(terrace, x, 0.18, front + 0.16, 0.045, 1, 0.06, ivory);
-  for (const x of [faceX - faceW / 2, faceX + faceW / 2]) {
-    box(
+  }
+  for (const [a, b] of [
+    [tip, outerCorner],
+    [outerCorner, innerCorner],
+  ]) {
+    const length = a.distanceTo(b),
+      posts = Math.ceil(length / 1.45);
+    edgeBox(terrace, a, b, 0.5, 0.2, length, 0.95, 0.05, balconyGlass, 0.04);
+    edgeBox(
       terrace,
-      x,
-      0.2,
-      front - setback / 2,
-      0.05,
-      0.95,
-      setback,
-      balconyGlass,
-    );
-    box(
-      terrace,
-      x,
+      a,
+      b,
+      0.5,
       1.12,
-      front - setback / 2,
-      0.09,
+      length + 0.05,
       0.06,
-      setback + 0.1,
+      0.09,
       '#b2bdb3',
+      0.04,
     );
+    for (let post = 0; post <= posts; post++)
+      edgeBox(terrace, a, b, post / posts, 0.18, 0.045, 1, 0.06, ivory, 0.04);
   }
   function planter(x: number, z: number) {
-    box(terrace, x, 0.19, z, 1.5, 0.42, 0.65, '#797e65');
+    box(terrace, x, 0.19, z, 1.3, 0.42, 0.42, '#797e65');
     for (let i = 0; i < 4; i++)
       mesh(
         terrace,
@@ -307,11 +332,14 @@ export function createFintocHQ(
         z,
       );
   }
-  planter(-4.8, crownFront + 0.5);
-  planter(-1.8, crownFront + 0.5);
-  planter(4.7, crownFront + 0.5);
-  for (const x of [1.2, 4.1]) {
-    const z = front - 1.3;
+  planter(-4.8, crownFront + 0.28);
+  planter(-0.2, crownFront + 0.28);
+  planter(4.5, crownFront + 2.75);
+  for (const [x, depth] of [
+    [1.7, 1.22],
+    [4.15, 1.55],
+  ]) {
+    const z = crownFront + depth;
     mesh(
       terrace,
       new THREE.CylinderGeometry(0.035, 0.035, 2.1, 8),
@@ -322,7 +350,7 @@ export function createFintocHQ(
     );
     mesh(
       terrace,
-      new THREE.ConeGeometry(1.25, 0.48, 12),
+      new THREE.ConeGeometry(1.05, 0.42, 12),
       mat('#e7e0d8'),
       x,
       2.45,
@@ -336,21 +364,21 @@ export function createFintocHQ(
       1.04,
       z,
     );
-    for (const dx of [-0.95, 0.95]) {
+    for (const dx of [-0.82, 0.82]) {
       box(terrace, x + dx, 0.2, z, 0.5, 0.42, 0.5, ivory);
       box(terrace, x + dx, 0.57, z - 0.22, 0.5, 0.5, 0.07, ivory);
     }
   }
-  box(terrace, -3.5, 0.2, front - 0.9, 2.4, 0.88, 0.63, '#69726a');
-  box(terrace, -3.5, 1.08, front - 0.9, 2.65, 0.12, 0.83, ivory);
+  box(terrace, -2.6, 0.2, crownFront + 0.4, 1.8, 0.88, 0.43, '#69726a');
+  box(terrace, -2.6, 1.08, crownFront + 0.4, 1.95, 0.12, 0.53, ivory);
   for (let i = 0; i < 5; i++)
     mesh(
       terrace,
       new THREE.CylinderGeometry(0.05, 0.065, 0.17, 8),
       mat(i % 2 ? '#cddce1' : '#cd983c'),
-      -4.35 + i * 0.4,
+      -3.3 + i * 0.35,
       1.28,
-      front - 0.9,
+      crownFront + 0.4,
     );
   batch(terrace);
 
@@ -362,8 +390,8 @@ export function createFintocHQ(
     const p = new THREE.Group();
     p.name = `Celebrating teammate ${i + 1}`;
     party.add(p);
-    const x = -5.7 + (i % 6) * 1.2,
-      z = front - 0.4 - (i > 5 ? 1.1 : 0),
+    const x = i < 6 ? -3.9 + i : 2.1 + (i - 6) * 0.85,
+      z = i < 6 ? frontAt(x) - 0.33 : crownFront + 0.35,
       shirt = ['#f3dfc2', '#3e8482', '#576b96', '#dba75d', '#dadbd2'][i % 5];
     p.position.set(x, 0, z);
     p.rotation.y = ((i % 3) - 1) * 0.6;
@@ -452,7 +480,6 @@ export function createFintocHQ(
   batch(roof);
   return {
     roof: { y: h + 0.85, z: crownFront - 0.1 },
-    facade: { y: terraceY + 1.25, z: crownFront + 0.1 },
     logoWidth: 19,
   };
 }
