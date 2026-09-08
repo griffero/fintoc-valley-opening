@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<title>Fintoc Valley · render 4K</title>
+<style>html,body,#scene{margin:0;width:100%;height:100%;overflow:hidden}canvas{display:block;width:100%;height:100%}</style>
+<div id="scene"></div>
+<script type="module">
+import { createEditableValley } from '/lib/editable-valley.ts';
+import { freshConfig } from '/lib/scene-config.ts';
+try {
+  // Settings used for the v3 release; adjust here for a different export.
+  const config = freshConfig();
+  config.buildings.find(b => b.id === 'startup').z = 120;
+  window.__engine = await createEditableValley(document.getElementById('scene'), config);
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  window.__renderFrame = (t, samples = 3) => {
+    window.__engine.render(t, samples);
+    return window.__engine.canvas.toDataURL('image/png').split(',')[1];
+  };
+  const gl = window.__engine.canvas.getContext('webgl2');
+  const extension = gl.getExtension('WEBGL_debug_renderer_info');
+  window.__renderInfo = {
+    width: window.__engine.canvas.width,
+    height: window.__engine.canvas.height,
+    devicePixelRatio,
+    renderer: extension ? gl.getParameter(extension.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER),
+    config,
+  };
+  window.__renderReady = true;
+} catch(error) {
+  window.__renderError = error.stack || String(error);
+}
+</script>
+</html>
