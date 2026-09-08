@@ -16,6 +16,7 @@ import { ShutterPass } from './shutter-pass';
 import { constructionStage, type CraneDelivery } from './construction-timeline';
 import { createFintocHQ } from './fintoc-hq';
 import { createCoffeeKiosk } from './coffee-kiosk';
+import { createNeighborhoodBuilding } from './neighborhood-buildings';
 import {
   createSurface,
   outdoorEnvironment,
@@ -696,7 +697,19 @@ export async function createEditableValley(
       color: b.color,
       roughness: 0.9,
     });
-    if (b.id !== 'fintoc')
+    if (b.id === 'campus' || b.id === 'office') {
+      createNeighborhoodBuilding(
+        g,
+        b.width,
+        b.depth,
+        b.height,
+        b.id === 'campus' ? 1 : 10,
+        b.id === 'campus' ? 801 : 802,
+        facade,
+        { box, mesh, mat, batch },
+      );
+      g.name = b.name;
+    } else if (b.id !== 'fintoc')
       office(
         g,
         b.width,
@@ -822,8 +835,10 @@ export async function createEditableValley(
         box(g, x, b.height + 0.6, b.depth / 2 - 0.2, 0.23, 3, 0.23, '#737b74');
     }
     if (b.id === 'campus') {
-      box(g, -2, b.height + 0.75, 0, 9, 0.13, 7, '#40a5b6');
-      for (let p = 0; p < 9; p++) person(g, -7 + p * 1.5, b.height + 0.8, 4, p);
+      const terraceY = Math.max(2.15, b.height / 3) + 0.55;
+      box(g, -2, terraceY, b.depth * 0.37, 9, 0.1, 1.8, '#40a5b6');
+      for (let p = 0; p < 7; p++)
+        person(g, -6.5 + p * 1.8, terraceY + 0.1, b.depth * 0.28, p);
     }
     batch(g);
   }
@@ -842,7 +857,13 @@ export async function createEditableValley(
       deliveries,
     ),
   );
-  // Mixed blocks continue past the crop. There is no floating platform or empty horizon.
+  // Coherent districts with local variation; neighboring parcels avoid repeated silhouettes.
+  const neighborhood: { x: number; z: number; family: number }[] = [];
+  const familyPools = [
+    [4, 8, 9, 4, 6, 0, 10, 11], // workshops and low studios
+    [0, 1, 11, 8, 6, 0, 3, 9], // garden campuses
+    [1, 2, 3, 5, 6, 7, 10, 11], // compact urban blocks
+  ];
   for (let z = -140; z < 285; z += 17)
     for (let x = -225; x < 225; x += 17) {
       const w = 7 + rand() * 5,
@@ -864,56 +885,43 @@ export async function createEditableValley(
       g.position.set(px, 0, pz);
       world.add(g);
       const h = 3 + rand() * 12;
-      const kind = Math.floor(rand() * 5);
-      g.name = [
-        'Courtyard office',
-        'Stepped office',
-        'Tower and podium',
-        'Low industrial studio',
-        'Ribbon office',
-      ][kind];
-      const wing = (
-        x: number,
-        y: number,
-        z: number,
-        width: number,
-        depth: number,
-        height: number,
-      ) => {
-        const part = new THREE.Group();
-        part.position.set(x, y, z);
-        office(part, width, depth, height, genericFacade, true);
-        // Bake each wing's placement into its geometry so the whole block can batch.
-        // Reparenting removes children from part; iterate over a stable copy.
-        for (const child of part.children.slice()) {
-          child.position.add(part.position);
-          g.add(child);
-        }
-      };
-      if (kind === 0) {
-        wing(0, 0, -d * 0.29, w, d * 0.42, h * 0.7);
-        wing(-w * 0.3, 0, d * 0.21, w * 0.4, d * 0.58, h * 0.7);
-      } else if (kind === 1) {
-        wing(0, 0, 0, w, d, h * 0.58);
-        wing(-w * 0.12, h * 0.58 + 0.6, -d * 0.16, w * 0.66, d * 0.6, h * 0.42);
-      } else if (kind === 2) {
-        wing(0, 0, 0, w, d, 2.5);
-        wing(w * 0.13, 3.1, -d * 0.08, w * 0.56, d * 0.66, h);
-      } else if (kind === 3) {
-        wing(0, 0, 0, w, d, 3.3);
-        for (let i = 0; i < 3; i++)
-          box(
-            g,
-            -w * 0.28 + i * w * 0.28,
-            4.2,
-            0,
-            w * 0.17,
-            0.4,
-            d * 0.6,
-            mat('#a7b7b1', 'glass'),
-          );
-      } else office(g, w, d, h, genericFacade, true);
-      batch(g);
+      const choice = rand();
+      const col = Math.round((x + 225) / 17),
+        row = Math.round((z + 140) / 17);
+      const seed = col * 73 + row * 137 + 17;
+      const district =
+        (((Math.floor(px / 64) + 2 * Math.floor(pz / 64)) % 3) + 3) % 3;
+      const pool = familyPools[district];
+      let family = pool[Math.floor(choice * pool.length)];
+      const nearby = neighborhood.filter(
+        (b) => Math.hypot(px - b.x, pz - b.z) < 28,
+      );
+      const towers = [2, 5, 7];
+      const highNeighbor = neighborhood.some(
+        (b) => towers.includes(b.family) && Math.hypot(px - b.x, pz - b.z) < 43,
+      );
+      for (let attempt = 0; attempt < 12; attempt++) {
+        if (
+          !nearby.some((b) => b.family === family) &&
+          !(highNeighbor && towers.includes(family))
+        )
+          break;
+        family = (family + 5) % 12;
+      }
+      const quarterTurn = (col + row * 3) % 4;
+      g.rotation.y = (quarterTurn * Math.PI) / 2;
+      const nearTitle = px > -95 && px < 100 && pz > -65 && pz < 85;
+      createNeighborhoodBuilding(
+        g,
+        quarterTurn % 2 ? d : w,
+        quarterTurn % 2 ? w : d,
+        Math.min(h, nearTitle ? 10.5 : 15),
+        family,
+        seed,
+        genericFacade,
+        { box, mesh, mat, batch },
+      );
+      neighborhood.push({ x: px, z: pz, family });
       occupied.push({ x: px, z: pz, w: w + 1, d: d + 1 });
     }
   // Authentic extruded billboards, with framing and supporting steel.

@@ -1,3 +1,7 @@
+# Actualización v2 · variedad arquitectónica · 8 de septiembre de 2026
+
+El barrio sin marcas deja de generarse apilando la misma oficina. Doce familias usan plantas, cubiertas y estructuras propias: patios abiertos, terrazas, puentes entre torres, cuñas, naves dentadas, torres ovaladas, pilotis, aletas, estudios a dos aguas, bóvedas, voladizos y pabellones. Se alternan alturas y orientaciones, se agrupan por sectores y se separan torres y siluetas repetidas. Campus oeste y Oficinas este también reciben una estructura diferente. La sede de Fintoc y las letras principales mantienen su geometría.
+
 # Actualización v1 · 8 de septiembre de 2026
 
 Se aplicó la auditoría posterior al MP4 v0: ciclos direccionales de luz de un segundo, cámara 27°/46° y encuadre corregido, menos relleno uniforme, velo cálido localizado, exposición temporal con subfotogramas reales, revelación tardía del título, dos frentes de construcción, siete entregas de grúa sincronizadas, globos/peatones/gestos más rápidos y demolición de campus previos. Se preservan los edificios finales, la terraza triangular y los logotipos vectoriales.
