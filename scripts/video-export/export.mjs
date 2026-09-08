@@ -6,7 +6,7 @@ import { createServer } from 'vite';
 
 const root = process.cwd();
 const work = path.join(root, 'work/video-export');
-const output = path.join(root, 'outputs/fintoc-valley-v3-4k.mp4');
+const output = path.join(root, 'outputs/fintoc-valley-v4-4k.mp4');
 const probe = process.argv.includes('--probe');
 const width = probe ? 1920 : 3840, height = probe ? 1080 : 2160;
 const fps = 24, total = 262;
@@ -114,11 +114,13 @@ try {
         window.__afterExport = engine.canvas.toDataURL();
         return {seekStable,titleRestored,exportRestored:expected===engine.canvas.toDataURL(),
           glbBytes:bytes.length,channels:json.animations[0].channels.length,
+          images:json.images?.length || 0,
+          texturedRoles:[...new Set(json.materials.filter(m=>m.pbrMetallicRoughness?.baseColorTexture && m.normalTexture && m.pbrMetallicRoughness?.metallicRoughnessTexture).map(m=>m.extras?.surfaceRole).filter(Boolean))],
           craneChildren:craneChildren.map(n=>({name:n.name,animated:animated.has(n.i)}))};
       })()`);
       console.log('Verification:',JSON.stringify(check));
       for(const phase of ['before','after']) await writeFile(path.join(work,phase+'-export.png'),Buffer.from(await evaluate(`window.__${phase}Export.split(',')[1]`),'base64'));
-      if(!check.seekStable || !check.titleRestored || !check.exportRestored || check.craneChildren.some(n=>!n.animated && n.name!=='Roof finishing piece')) throw new Error('Animation verification failed');
+      if(!check.seekStable || !check.titleRestored || !check.exportRestored || check.texturedRoles.length !== 10 || check.craneChildren.some(n=>!n.animated && n.name!=='Roof finishing piece')) throw new Error('Animation verification failed');
       await writeFile(path.join(work,'verification.json'),JSON.stringify(check,null,2));
       const pieces = [];
       for(let start=0;start<check.glbBytes;start+=49152) {

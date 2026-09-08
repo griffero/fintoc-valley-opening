@@ -221,7 +221,16 @@ export function createCityLife(
   function solar(p: THREE.Object3D, x: number, y: number, z: number, rows = 3) {
     for (let i = 0; i < rows; i++)
       for (let j = 0; j < 4; j++) {
-        box(p, x + i * 1.5, y, z + j * 1.8, 1.4, 0.11, 1.65, '#32566d');
+        box(
+          p,
+          x + i * 1.5,
+          y,
+          z + j * 1.8,
+          1.4,
+          0.11,
+          1.65,
+          mat('#32566d', 'solar'),
+        );
         for (let n = 1; n < 3; n++)
           box(
             p,
@@ -278,7 +287,7 @@ export function createCityLife(
       );
     }
   }
-  slab(wave, ribbon, 11.6, 0.35, ivory);
+  slab(wave, ribbon, 11.6, 0.35, mat(ivory, 'roof'));
   // A pitched, bowed atrium is distinct from a rectangular office roof.
   const canopy = group(wave, 'Sweeping glass atrium');
   const verts: number[] = [],

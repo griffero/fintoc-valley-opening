@@ -19,7 +19,8 @@ import { createCoffeeKiosk } from './coffee-kiosk';
 import { createNeighborhoodBuilding } from './neighborhood-buildings';
 import { createOpeningCampuses } from './opening-campus';
 import {
-  createSurface,
+  createSurfaceLibrary,
+  surfaceGeometry,
   outdoorEnvironment,
   type SurfaceRole,
 } from './outdoor-materials';
@@ -83,7 +84,7 @@ export async function createEditableValley(
     freeCamera = false;
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#afbba0');
-  scene.fog = new THREE.Fog('#d4d6bd', 260, 760);
+  // Atmosphere is applied once using scene depth after the contact-shadow pass.
   const world = new THREE.Group();
   world.name = 'Silicon Valley · editable scene';
   scene.add(world);
@@ -114,8 +115,8 @@ export async function createEditableValley(
   controls.maxPolarAngle = Math.PI * 0.47;
   const ambient = new THREE.HemisphereLight(
     '#cbd8e8',
-    '#8c7773',
-    config.lighting.ambient,
+    '#81867e',
+    config.lighting.ambient * 1.25,
   );
   scene.add(ambient);
   const sun = new THREE.DirectionalLight('#ffe3ba', config.lighting.sun);
@@ -134,12 +135,12 @@ export async function createEditableValley(
     bottom: -150,
     far: 350,
   });
-  sun.shadow.normalBias = 0.15;
+  sun.shadow.normalBias = 0.11;
   sun.shadow.bias = -0.00012;
-  sun.shadow.radius = 4;
+  sun.shadow.radius = 3.2;
   sun.name = 'Moving daylight';
   scene.add(sunRig);
-  const fill = new THREE.DirectionalLight('#a8bde3', 0.18);
+  const fill = new THREE.DirectionalLight('#a8bde3', 0.26);
   fill.position.set(90, 40, -80);
   fill.lookAt(0, 0, 0);
   fill.target.position.set(0, 0, -1);
@@ -152,7 +153,9 @@ export async function createEditableValley(
   scene.add(exportRoot);
   const environmentTarget = outdoorEnvironment(renderer);
   scene.environment = environmentTarget.texture;
-  scene.environmentIntensity = 0.22;
+  scene.environmentIntensity = 0.28;
+  const surfaces = createSurfaceLibrary(renderer, environmentTarget.texture);
+  const { createSurface } = surfaces;
   const composer = new EffectComposer(renderer);
   composer.renderTarget1.samples = 4;
   composer.renderTarget2.samples = 4;
@@ -160,32 +163,42 @@ export async function createEditableValley(
   composer.addPass(shutter);
   const ao = new GTAOPass(scene, camera, 1, 1);
   ao.updateGtaoMaterial({
-    radius: 3.2,
-    thickness: 1.6,
+    radius: 1.7,
+    thickness: 0.65,
     distanceExponent: 1.4,
     distanceFallOff: 1,
     samples: 12,
     screenSpaceRadius: false,
   });
   ao.updatePdMaterial({
-    radius: 5,
+    radius: 3,
     lumaPhi: 8,
     depthPhi: 3,
     normalPhi: 4,
     samples: 12,
   });
-  ao.blendIntensity = config.lighting.occlusion;
+  ao.blendIntensity = config.lighting.occlusion * 0.8;
   composer.addPass(ao);
   const atmosphere = new ShaderPass({
-    uniforms: { tDiffuse: { value: null }, veil: { value: 0.035 } },
+    uniforms: {
+      tDiffuse: { value: null },
+      tDepth: { value: ao.depthTexture },
+      veil: { value: 0.026 },
+      cameraNear: { value: camera.near },
+      cameraFar: { value: camera.far },
+      airColor: { value: new THREE.Color('#dbe4e8') },
+    },
     vertexShader: `varying vec2 uv0; void main(){uv0=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
-    fragmentShader: `uniform sampler2D tDiffuse; uniform float veil; varying vec2 uv0;
-      void main(){vec4 c=texture2D(tDiffuse,uv0);
-        float luma=dot(c.rgb,vec3(.2126,.7152,.0722));
-        c.rgb+=vec3(1.,.91,.82)*.0215*exp(-luma/.06);
-        float field=exp(-dot((uv0-vec2(.03,1.05))*vec2(1.8,1.7),(uv0-vec2(.03,1.05))*vec2(1.8,1.7)));
-        c.rgb=mix(c.rgb,vec3(1.55,1.24,1.03),field*veil);
-        gl_FragColor=c;}`,
+    fragmentShader: `uniform sampler2D tDiffuse; uniform sampler2D tDepth;
+      uniform float veil, cameraNear, cameraFar; uniform vec3 airColor; varying vec2 uv0;
+      void main(){
+        vec4 c=texture2D(tDiffuse,uv0);
+        float depth=texture2D(tDepth,uv0).r;
+        float distanceToCamera=mix(cameraNear,cameraFar,depth);
+        float air=smoothstep(180.,520.,distanceToCamera)*(veil*.7+.012);
+        c.rgb=mix(c.rgb,airColor,air*step(depth,.99999));
+        gl_FragColor=c;
+      }`,
   });
   composer.addPass(atmosphere);
   const output = new OutputPass();
@@ -200,14 +213,8 @@ export async function createEditableValley(
     }
     return m;
   }
-  const grassMat = new THREE.MeshStandardMaterial({
-    color: config.palette.grass,
-    roughness: 1,
-  });
-  const roadMat = new THREE.MeshStandardMaterial({
-    color: config.palette.asphalt,
-    roughness: 1,
-  });
+  const grassMat = createSurface(config.palette.grass, 'grass');
+  const roadMat = createSurface(config.palette.asphalt, 'asphalt');
   const titleMat = new THREE.MeshStandardMaterial({
     color: new THREE.Color(config.palette.title).multiplyScalar(0.52),
     roughness: 0.58,
@@ -217,10 +224,7 @@ export async function createEditableValley(
     color: config.palette.fintoc,
     roughness: 0.7,
   });
-  const genericFacade = new THREE.MeshStandardMaterial({
-    color: config.palette.facade,
-    roughness: 0.93,
-  });
+  const genericFacade = createSurface(config.palette.facade);
   const cube = new THREE.BoxGeometry(1, 1, 1);
   function box(
     parent: THREE.Object3D,
@@ -232,9 +236,10 @@ export async function createEditableValley(
     d: number,
     color: string | THREE.Material,
   ) {
+    const material = typeof color === 'string' ? mat(color) : color;
     const m = new THREE.Mesh(
-      cube,
-      typeof color === 'string' ? mat(color) : color,
+      surfaceGeometry(cube, material, new THREE.Vector3(w, h, d)),
+      material,
     );
     m.position.set(x, y + h / 2, z);
     m.scale.set(w, h, d);
@@ -251,7 +256,7 @@ export async function createEditableValley(
     y = 0,
     z = 0,
   ) {
-    const m = new THREE.Mesh(geometry, material);
+    const m = new THREE.Mesh(surfaceGeometry(geometry, material), material);
     m.position.set(x, y, z);
     m.castShadow = true;
     m.receiveShadow = true;
@@ -304,6 +309,7 @@ export async function createEditableValley(
       });
       const g = mergeGeometries(gs);
       if (g) {
+        g.userData.surfaceUV = true; // Each source already has metric UVs.
         const combined = mesh(parent, g, material);
         combined.name = 'Architectural detail';
         list.forEach((m) => parent.remove(m));
@@ -333,7 +339,7 @@ export async function createEditableValley(
     const m = mesh(
       parent,
       g,
-      typeof color === 'string' ? mat(color) : color,
+      typeof color === 'string' ? mat(color, 'paint') : color,
       x,
       y,
       z,
@@ -384,8 +390,8 @@ export async function createEditableValley(
       o.geometry.setIndex(indices);
       const material =
         typeof color === 'string'
-          ? mat(color)
-          : (color ?? mat('#' + o.color.getHexString()));
+          ? mat(color, 'paint')
+          : (color ?? mat('#' + o.color.getHexString(), 'paint'));
       mesh(group, o.geometry, material);
     }
     if (!separate) batch(group);
@@ -456,7 +462,7 @@ export async function createEditableValley(
           0.8,
           0.18,
           b - a,
-          colors.curb,
+          mat(colors.curb, 'paving'),
         );
     }
     if (x === 45) {
@@ -480,7 +486,7 @@ export async function createEditableValley(
             0.8,
             0.18,
             length,
-            colors.curb,
+            mat(colors.curb, 'paving'),
           );
           edge.rotation.y = road.rotation.y;
         }
@@ -506,7 +512,16 @@ export async function createEditableValley(
   for (const z of zRoads) {
     box(world, 0, 0.001, z, 590, 0.065, 7, roadMat);
     for (const side of [-1, 1])
-      box(world, 0, 0, z + side * 3.9, 590, 0.18, 0.8, colors.curb);
+      box(
+        world,
+        0,
+        0,
+        z + side * 3.9,
+        590,
+        0.18,
+        0.8,
+        mat(colors.curb, 'paving'),
+      );
     for (let x = -285; x < 285; x += 4.5) {
       if (xRoads.some((r) => Math.abs(r - x) < 5)) continue;
       box(world, x, 0.07, z, 1.7, 0.015, 0.12, '#e2ddc9');
@@ -542,8 +557,8 @@ export async function createEditableValley(
     geometry.rotateX(-Math.PI / 2);
     mesh(world, geometry, material, 0, y, 0);
   }
-  const parcelMat = createSurface(config.palette.grass);
-  titleParcel(0, 0.06, mat('#c8c4b3'));
+  const parcelMat = createSurface(config.palette.grass, 'grass');
+  titleParcel(0, 0.06, mat('#c8c4b3', 'paving'));
   titleParcel(0.7, 0.19, parcelMat);
   let seed = 41411;
   const rand = () => {
@@ -592,7 +607,7 @@ export async function createEditableValley(
     facade: THREE.Material,
     detail = true,
   ) {
-    box(parent, 0, 0, 0, w + 1.5, 0.25, d + 1.5, colors.curb);
+    box(parent, 0, 0, 0, w + 1.5, 0.25, d + 1.5, mat(colors.curb, 'paving'));
     box(parent, 0, 0.25, 0, w, h, d, facade);
     // Glass ribbons wrap all four faces; individual mullions retain the miniature scale.
     const step = 2.35;
@@ -627,7 +642,7 @@ export async function createEditableValley(
           box(parent, s * (w / 2 + 0.045), y, z, 0.08, 1.46, 0.12, facade);
     }
     box(parent, 0, h + 0.25, 0, w + 0.3, 0.3, d + 0.3, colors.roof);
-    box(parent, 0, h + 0.55, 0, w - 0.8, 0.13, d - 0.8, '#c5bcae');
+    box(parent, 0, h + 0.55, 0, w - 0.8, 0.13, d - 0.8, mat('#c5bcae', 'roof'));
     for (const s of [-1, 1]) {
       box(
         parent,
@@ -684,7 +699,7 @@ export async function createEditableValley(
           1.55,
           0.13,
           2.7,
-          '#375466',
+          mat('#375466', 'solar'),
         );
     }
   }
@@ -694,10 +709,7 @@ export async function createEditableValley(
     g.name = b.name;
     world.add(g);
     g.position.set(b.x, 0, b.z);
-    const facade = new THREE.MeshStandardMaterial({
-      color: b.color,
-      roughness: 0.9,
-    });
+    const facade = createSurface(b.color);
     if (b.id === 'campus' || b.id === 'office') {
       createNeighborhoodBuilding(
         g,
@@ -1325,13 +1337,13 @@ export async function createEditableValley(
     }
   const crowns = new THREE.InstancedMesh(
     new THREE.IcosahedronGeometry(1.4, 1),
-    mat('#ffffff'),
+    mat('#ffffff', 'foliage'),
     treePositions.length,
   );
   crowns.name = 'Rounded broadleaf tree crowns';
   const conifers = new THREE.InstancedMesh(
     new THREE.ConeGeometry(1.1, 4.6, 8),
-    mat('#ffffff'),
+    mat('#ffffff', 'foliage'),
     treePositions.length,
   );
   conifers.name = 'Narrow conifers';
@@ -1340,7 +1352,7 @@ export async function createEditableValley(
   crowns.receiveShadow = true;
   const trunks = new THREE.InstancedMesh(
     new THREE.CylinderGeometry(0.16, 0.22, 2.6, 5),
-    mat(colors.trunk),
+    mat(colors.trunk, 'wood'),
     treePositions.length,
   );
   trunks.name = 'Tree trunks';
@@ -1371,6 +1383,8 @@ export async function createEditableValley(
     temp.updateMatrix();
     trunks.setMatrixAt(i, temp.matrix);
   });
+  for (const tree of [crowns, conifers, trunks] as THREE.InstancedMesh[])
+    tree.geometry = surfaceGeometry(tree.geometry, tree.material);
   world.add(crowns, conifers, trunks);
   const freeway = new THREE.Group();
   freeway.name = 'Elevated curved freeway';
@@ -1607,11 +1621,11 @@ export async function createEditableValley(
   function updateConfig(next: ValleyConfig) {
     const changed = config.title.join('|') !== next.title.join('|');
     config = structuredClone(next);
-    grassMat.color.set(config.palette.grass).multiplyScalar(1.38);
-    ambient.intensity = config.lighting.ambient;
+    grassMat.color.set(config.palette.grass).multiplyScalar(1.45);
+    ambient.intensity = config.lighting.ambient * 1.25;
     sun.intensity = config.lighting.sun;
     renderer.toneMappingExposure = config.lighting.exposure;
-    ao.blendIntensity = config.lighting.occlusion;
+    ao.blendIntensity = config.lighting.occlusion * 0.8;
     roadMat.color.set(config.palette.asphalt);
     genericFacade.color.set(config.palette.facade);
     titleMat.color.set(config.palette.title).multiplyScalar(0.52);
@@ -1743,7 +1757,7 @@ export async function createEditableValley(
     sunRig.quaternion.copy(daylight.rotation);
     sun.color.copy(daylight.color);
     sun.intensity = config.lighting.sun * daylight.sunFactor;
-    ambient.intensity = config.lighting.ambient * daylight.ambientFactor;
+    ambient.intensity = config.lighting.ambient * 1.25 * daylight.ambientFactor;
     atmosphere.uniforms.veil.value = daylight.haze;
     sunRig.updateMatrixWorld(true);
   }
@@ -1940,6 +1954,7 @@ export async function createEditableValley(
       });
       geometries.forEach((g) => g.dispose());
       materials.forEach((m) => m.dispose());
+      surfaces.dispose();
       renderer.dispose();
       renderer.domElement.remove();
     },

@@ -58,12 +58,15 @@ export function createNeighborhoodBuilding(
     ['#809b9e', '#718d99', '#a4b4ad', '#637f88'][variant],
     'glass',
   );
-  const roof = mat(['#d2c5ae', '#aeb4b0', '#bfb8aa', '#d6d1c3'][variant]);
+  const roof = mat(
+    ['#d2c5ae', '#aeb4b0', '#bfb8aa', '#d6d1c3'][variant],
+    'roof',
+  );
   const metal = mat('#667675', 'metal');
   const h = Math.max(5, height);
   parent.name = `${NEIGHBORHOOD_FAMILIES[family]} · ${seed}`;
   parent.userData.architecture = NEIGHBORHOOD_FAMILIES[family];
-  box(parent, 0, 0, 0, w + 0.65, 0.16, d + 0.65, '#c8bfae');
+  box(parent, 0, 0, 0, w + 0.65, 0.16, d + 0.65, mat('#c8bfae', 'paving'));
 
   function beam(
     a: number[],
@@ -146,7 +149,16 @@ export function createNeighborhoodBuilding(
     depth: number,
   ) {
     box(parent, x, y, z, width, 0.24, depth, '#a2947b');
-    box(parent, x, y + 0.24, z, width - 0.12, 0.24, depth - 0.12, '#597146');
+    box(
+      parent,
+      x,
+      y + 0.24,
+      z,
+      width - 0.12,
+      0.24,
+      depth - 0.12,
+      mat('#597146', 'grass'),
+    );
   }
   function pergola(
     x: number,
@@ -165,10 +177,19 @@ export function createNeighborhoodBuilding(
           0.12,
           1.5,
           0.12,
-          accent,
+          mat(accent, 'wood'),
         );
     for (let px = -width / 2; px <= width / 2 + 0.01; px += 0.52)
-      box(parent, x + px, y + 1.5, z, 0.17, 0.16, depth + 0.35, accent);
+      box(
+        parent,
+        x + px,
+        y + 1.5,
+        z,
+        0.17,
+        0.16,
+        depth + 0.35,
+        mat(accent, 'wood'),
+      );
   }
   function polygon(
     points: number[][],

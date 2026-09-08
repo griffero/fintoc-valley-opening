@@ -40,7 +40,7 @@ export function sampleDaylight(
   const rotation = new THREE.Quaternion().setFromRotationMatrix(
     new THREE.Matrix4().lookAt(offset, origin, up),
   );
-  const color = new THREE.Color('#fff0df').lerp(
+  const color = new THREE.Color('#fff4e8').lerp(
     new THREE.Color('#ffdebd').lerp(new THREE.Color('#fff5eb'), roofPhase),
     envelope * strength,
   );

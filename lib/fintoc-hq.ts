@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { createMotion } from './city-life';
+import type { SurfaceRole } from './outdoor-materials';
 
 type Kit = {
   box: (
@@ -20,7 +21,7 @@ type Kit = {
     y?: number,
     z?: number,
   ) => THREE.Mesh;
-  mat: (color: string) => THREE.MeshStandardMaterial;
+  mat: (color: string, role?: SurfaceRole) => THREE.MeshStandardMaterial;
   batch: (parent: THREE.Object3D) => void;
 };
 
@@ -93,22 +94,9 @@ export function createFintocHQ(
   }
   const ivory = '#e9eee7',
     frame = '#b9cdc7';
-  const glass = new THREE.MeshPhysicalMaterial({
-    color: '#456f68',
-    roughness: 0.23,
-    metalness: 0.22,
-    clearcoat: 0.45,
-    clearcoatRoughness: 0.18,
-    envMapIntensity: 1.1,
-  });
+  const glass = mat('#456f68', 'glass');
   const panes = ['#4d766f', '#60867d', '#6d8e84', '#3e6663', '#7b9890'].map(
-    (color) =>
-      new THREE.MeshStandardMaterial({
-        color,
-        roughness: 0.28,
-        metalness: 0.24,
-        envMapIntensity: 0.9,
-      }),
+    (color) => mat(color, 'glass'),
   );
   const balconyGlass = new THREE.MeshPhysicalMaterial({
     color: '#a9d0c3',
@@ -122,7 +110,7 @@ export function createFintocHQ(
   const plinth = new THREE.Group();
   plinth.name = 'Fintoc · entrance plaza';
   parent.add(plinth);
-  box(plinth, 0, 0.05, 0, w + 2, 0.2, d + 2, '#cbc9ba');
+  box(plinth, 0, 0.05, 0, w + 2, 0.2, d + 2, mat('#cbc9ba', 'paving'));
   for (let x = -w / 2; x <= w / 2; x += 2.4)
     box(plinth, x, 0.2, frontAt(x) + 0.55, 1.6, 0.055, 0.65, '#b5bdb4');
 
@@ -282,7 +270,7 @@ export function createFintocHQ(
   terrace.name = 'Fintoc · triangular rooftop terrace';
   terrace.position.y = terraceY;
   parent.add(terrace);
-  mesh(terrace, wedge(0.18), mat('#d6d0bb'));
+  mesh(terrace, wedge(0.18), mat('#d6d0bb', 'wood'));
   // Shorter boards toward the pointed end, all clipped to the same diagonal.
   for (let x = tipX + 0.6; x < wideX - 0.25; x += 0.42) {
     const boardDepth = frontAt(x - 0.18) - crownFront - 0.2;
@@ -295,7 +283,7 @@ export function createFintocHQ(
       0.36,
       0.02,
       boardDepth,
-      '#c8b99a',
+      mat('#c8b99a', 'wood'),
     );
   }
   for (const [a, b] of [
@@ -326,7 +314,7 @@ export function createFintocHQ(
       mesh(
         terrace,
         new THREE.IcosahedronGeometry(0.32, 1),
-        mat(['#547443', '#718851'][i % 2]),
+        mat(['#547443', '#718851'][i % 2], 'foliage'),
         x - 0.5 + i * 0.34,
         0.81,
         z,
@@ -440,7 +428,16 @@ export function createFintocHQ(
   roof.name = 'Fintoc · upper roof and equipment';
   roof.position.y = h;
   parent.add(roof);
-  box(roof, 0, 0, -setback / 2, w + 0.3, 0.18, coreDepth + 0.3, ivory);
+  box(
+    roof,
+    0,
+    0,
+    -setback / 2,
+    w + 0.3,
+    0.18,
+    coreDepth + 0.3,
+    mat(ivory, 'roof'),
+  );
   for (const z of [-d / 2, crownFront])
     box(roof, 0, 0.18, z, w + 0.3, 0.35, 0.15, '#8ca09a');
   for (const x of [-w / 2, w / 2])
@@ -465,8 +462,17 @@ export function createFintocHQ(
     true,
   );
   mesh(roof, new THREE.TubeGeometry(curve, 80, 0.03, 4, true), mat('#77867e'));
-  box(roof, -w * 0.28, 0.2, -d * 0.22, 2.5, 0.55, 1.3, '#a4aaa0');
-  box(roof, -w * 0.1, 0.23, -d * 0.22, 3.2, 0.22, 0.48, '#b6bcb0');
+  box(roof, -w * 0.28, 0.2, -d * 0.22, 2.5, 0.55, 1.3, mat('#a4aaa0', 'metal'));
+  box(
+    roof,
+    -w * 0.1,
+    0.23,
+    -d * 0.22,
+    3.2,
+    0.22,
+    0.48,
+    mat('#b6bcb0', 'metal'),
+  );
   for (const x of [-w * 0.3, 0, w * 0.3])
     box(roof, x, 0.18, crownFront - 0.15, 0.12, 0.72, 0.18, '#42534b');
   for (let i = 0; i < 3; i++)

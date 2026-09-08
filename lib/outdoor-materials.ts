@@ -1,17 +1,54 @@
 import * as THREE from 'three';
 
-export type SurfaceRole = 'masonry' | 'glass' | 'metal';
+import { createTextureLibrary, type SurfaceRole } from './surface-textures';
+export { surfaceGeometry, type SurfaceRole } from './surface-textures';
 
-/** Materials are selected by purpose, not by an exact match of their paint color. */
-export function createSurface(color: string, role: SurfaceRole = 'masonry') {
-  const material = new THREE.MeshStandardMaterial({
-    color,
-    roughness: role === 'glass' ? 0.25 : role === 'metal' ? 0.48 : 0.86,
-    metalness: role === 'glass' ? 0.32 : role === 'metal' ? 0.5 : 0,
-    envMapIntensity: role === 'glass' ? 1.2 : 0.5,
-  });
-  material.name = `${role} · ${color}`;
-  return material;
+/** One scene owns the shared maps; materials retain independently editable colors. */
+export function createSurfaceLibrary(
+  renderer: THREE.WebGLRenderer,
+  environment: THREE.Texture,
+) {
+  const textures = createTextureLibrary(renderer);
+  const roughness: Record<SurfaceRole, number> = {
+    masonry: 0.92,
+    roof: 0.95,
+    glass: 0.36,
+    metal: 0.58,
+    asphalt: 1,
+    paving: 0.9,
+    grass: 1,
+    foliage: 1,
+    wood: 0.85,
+    solar: 0.34,
+    paint: 0.7,
+  };
+  function createSurface(color: string, role: SurfaceRole = 'masonry') {
+    const reflective = role === 'glass' || role === 'metal' || role === 'solar';
+    const material = new THREE.MeshStandardMaterial({
+      color,
+      roughness: roughness[role],
+      metalness:
+        role === 'metal'
+          ? 0.65
+          : role === 'glass' || role === 'solar'
+            ? 0.16
+            : 0,
+      ...(role === 'paint' ? {} : textures.get(role)),
+      ...(reflective
+        ? {
+            envMap: environment,
+            envMapIntensity: role === 'metal' ? 0.34 : 0.46,
+          }
+        : {}),
+    });
+    material.normalScale.setScalar(
+      role === 'glass' || role === 'solar' ? 0.06 : 0.45,
+    );
+    material.name = `${role} · ${color}`;
+    material.userData.surfaceRole = role;
+    return material;
+  }
+  return { createSurface, dispose: textures.dispose };
 }
 
 /** Broad sky/horizon reflections. Entirely procedural; no photographic backdrop. */
@@ -20,10 +57,10 @@ export function outdoorEnvironment(renderer: THREE.WebGLRenderer) {
   const geometry = new THREE.SphereGeometry(100, 64, 32);
   const positions = geometry.getAttribute('position');
   const colors = new Float32Array(positions.count * 3);
-  const ground = new THREE.Color('#847774');
-  const horizon = new THREE.Color('#eee5de');
-  const zenith = new THREE.Color('#8eaec8');
-  const cloud = new THREE.Color('#f1f0e7');
+  const ground = new THREE.Color('#687273');
+  const horizon = new THREE.Color('#e4e9e7');
+  const zenith = new THREE.Color('#7298ba');
+  const cloud = new THREE.Color('#ffffff');
   const color = new THREE.Color();
   for (let i = 0; i < positions.count; i++) {
     const y = positions.getY(i) / 100;
@@ -33,7 +70,7 @@ export function outdoorEnvironment(renderer: THREE.WebGLRenderer) {
       color.copy(horizon).lerp(zenith, Math.pow(y, 0.55));
       // Wide, soft cloud banks provide variation across adjacent glass planes.
       const bank = Math.exp(-Math.pow((y - 0.3) / 0.13, 2));
-      color.lerp(cloud, bank * (0.3 + 0.25 * Math.sin(angle * 3 + 0.8)));
+      color.lerp(cloud, bank * (0.52 + 0.4 * Math.sin(angle * 3 + 0.8)));
     }
     color.toArray(colors, i * 3);
   }

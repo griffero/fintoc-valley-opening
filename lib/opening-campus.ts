@@ -43,8 +43,8 @@ export function createOpeningCampuses(world: THREE.Group, kit: Kit) {
     frame = mat('#d8d0c3');
   const shadowGlass = mat('#53686f', 'glass'),
     stone = mat('#b5afa4');
-  const roof = mat('#e4ded3'),
-    darkRoof = mat('#8e938f');
+  const roof = mat('#e4ded3', 'roof'),
+    darkRoof = mat('#8e938f', 'roof');
   function polygon(
     p: THREE.Group,
     points: number[][],
@@ -112,14 +112,14 @@ export function createOpeningCampuses(world: THREE.Group, kit: Kit) {
   }
   function garden(p: THREE.Group, x: number, z: number, w: number, d: number) {
     box(p, x, 0.21, z, w, 0.22, d, '#a29b88');
-    box(p, x, 0.43, z, w - 0.18, 0.18, d - 0.18, '#648448');
+    box(p, x, 0.43, z, w - 0.18, 0.18, d - 0.18, mat('#648448', 'grass'));
     for (let i = 0; i < Math.max(1, Math.floor(w / 3)); i++) {
       const px = x - w / 2 + 1.5 + i * 3;
       box(p, px, 0.55, z, 0.13, 1.1, 0.13, '#827057');
       const crown = mesh(
         p,
         new THREE.IcosahedronGeometry(0.85, 1),
-        mat('#5b7a40'),
+        mat('#5b7a40', 'foliage'),
         px,
         2,
         z,
@@ -145,7 +145,7 @@ export function createOpeningCampuses(world: THREE.Group, kit: Kit) {
           1.65,
           0.13,
           1.9,
-          mat('#3f5865', 'glass'),
+          mat('#3f5865', 'solar'),
         );
         for (let k = 1; k < 4; k++)
           box(
@@ -168,12 +168,12 @@ export function createOpeningCampuses(world: THREE.Group, kit: Kit) {
     rows: number,
   ) {
     for (let i = 0; i < rows; i++) {
-      box(p, x + i * 2, y, z, 1.6, 0.7, 2, '#9ca19d');
+      box(p, x + i * 2, y, z, 1.6, 0.7, 2, mat('#9ca19d', 'metal'));
       for (const dz of [-0.5, 0.5])
         mesh(
           p,
           new THREE.CylinderGeometry(0.43, 0.43, 0.12, 12),
-          mat('#59615f'),
+          mat('#59615f', 'metal'),
           x + i * 2,
           y + 0.76,
           z + dz,
@@ -204,7 +204,7 @@ export function createOpeningCampuses(world: THREE.Group, kit: Kit) {
       count * 2.2 + 0.7,
       0.045,
       4.3,
-      '#777970',
+      mat('#777970', 'asphalt'),
     );
     for (let i = 0; i <= count; i++)
       box(p, x - 1.05 + i * 2.2, 0.25, z, 0.045, 0.015, 3.7, '#dfdbcd');
@@ -225,7 +225,7 @@ export function createOpeningCampuses(world: THREE.Group, kit: Kit) {
         width,
         0.04,
         Math.hypot(dx, dz) + 0.08,
-        '#74766e',
+        mat('#74766e', 'asphalt'),
       );
       road.rotation.y = Math.atan2(dx, dz);
     }
@@ -236,7 +236,7 @@ export function createOpeningCampuses(world: THREE.Group, kit: Kit) {
     p.position.set(site.x, 0, site.z);
     world.add(p);
     p.userData.architecture = 'Connected opening campus';
-    box(p, 0, 0.08, 0, site.w, 0.1, site.d, '#b9b4a7');
+    box(p, 0, 0.08, 0, site.w, 0.1, site.d, mat('#b9b4a7', 'paving'));
     return p;
   });
   // Long folded wings occupy the foreground instead of isolated garden plots.

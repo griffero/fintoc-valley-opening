@@ -1,3 +1,7 @@
+# V4 · Surface and lighting finish
+
+The final material audit and the implemented ten texture/four lighting changes are recorded in [TEXTURE-LIGHTING-AUDIT.md](TEXTURE-LIGHTING-AUDIT.md). This version preserves v3 camera, architecture and choreography.
+
 # Actualización v3 · composición y densidad · 8 de septiembre de 2026
 
 La galería de [yU+co](https://www.yuco.com/works/silicon-valley), incluidos los planos generales y modelos aislados, muestra campus grandes y conectados ocupando el primer término. La versión anterior variaba las siluetas pero seguía mostrando parcelas pequeñas rodeadas de césped. Se corrigió el punto de partida de cámara para entrar directamente en Fintoc, Android, Intel y las obras; el encuadre final y la pausa se mantienen.

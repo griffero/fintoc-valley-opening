@@ -47,8 +47,8 @@ export function createCoffeeKiosk(
   world.add(kiosk);
   const dark = '#26302c',
     ivory = '#eee9dd',
-    wood = '#ac855e';
-  box(kiosk, 0.35, 0.02, 0.4, 8.4, 0.16, 6.1, '#c8c5b7');
+    wood = mat('#ac855e', 'wood');
+  box(kiosk, 0.35, 0.02, 0.4, 8.4, 0.16, 6.1, mat('#c8c5b7', 'paving'));
   for (let x = -3.4; x < 4.3; x += 0.85)
     box(kiosk, x, 0.185, 0.4, 0.015, 0.005, 5.9, '#acae9f');
 
@@ -209,7 +209,7 @@ export function createCoffeeKiosk(
     mesh(
       stand,
       new THREE.CylinderGeometry(0.34, 0.34, 0.09, 12),
-      mat(wood),
+      wood,
       3.5,
       0.78,
       z,
