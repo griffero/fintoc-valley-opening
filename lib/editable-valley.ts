@@ -11,6 +11,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { DEFAULT_CONFIG, type ValleyConfig } from './scene-config';
+import { createCityLife, createMotion } from './city-life';
 
 const smooth = (a: number, b: number, t: number) => {
   const p = THREE.MathUtils.clamp((t - a) / (b - a), 0, 1);
@@ -43,6 +44,11 @@ export async function createEditableValley(
   );
   const assetNames = [
     'fintoc-logo',
+    'old-fintoc-logo',
+    'old-fintoc-symbol',
+    'ebay-1999-2012',
+    'intel-2006-2020',
+    'myspace-2008',
     'google',
     'twitter-bird',
     'facebook-lettering',
@@ -242,7 +248,7 @@ export async function createEditableValley(
   }
   function batch(parent: THREE.Object3D) {
     const sets = new Map<THREE.Material, THREE.Mesh[]>();
-    for (const o of [...parent.children])
+    for (const o of parent.children)
       if (
         o instanceof THREE.Mesh &&
         !(o instanceof THREE.InstancedMesh) &&
@@ -254,9 +260,16 @@ export async function createEditableValley(
       }
     for (const [material, list] of sets) {
       if (list.length < 2) continue;
+      const mixedIndices =
+        list.some((m) => m.geometry.index) &&
+        list.some((m) => !m.geometry.index);
       const gs = list.map((m) => {
         m.updateMatrix();
-        return m.geometry.clone().applyMatrix4(m.matrix);
+        const geometry =
+          mixedIndices && m.geometry.index
+            ? m.geometry.toNonIndexed()
+            : m.geometry.clone();
+        return geometry.applyMatrix4(m.matrix);
       });
       const g = mergeGeometries(gs);
       if (g) {
@@ -302,6 +315,7 @@ export async function createEditableValley(
     width: number,
     depth: number,
     color?: string | THREE.Material,
+    separate = false,
   ) {
     const data = svgs.get(asset)!;
     const group = new THREE.Group();
@@ -343,8 +357,45 @@ export async function createEditableValley(
           : (color ?? mat('#' + o.color.getHexString()));
       mesh(group, o.geometry, material);
     }
-    batch(group);
+    if (!separate) batch(group);
     return group;
+  }
+  const motion = createMotion();
+  function logoPieces(logo: THREE.Group, start: number, old = false) {
+    const parts = logo.children.filter(
+      (o): o is THREE.Mesh => o instanceof THREE.Mesh,
+    );
+    // Center the genuine SVG shapes so each letter/bar rotates about its own pivot.
+    parts.sort((a, b) => {
+      a.geometry.computeBoundingBox();
+      b.geometry.computeBoundingBox();
+      return a.geometry.boundingBox!.min.x - b.geometry.boundingBox!.min.x;
+    });
+    parts.forEach((part, i) => {
+      const center = part.geometry.boundingBox!.getCenter(new THREE.Vector3());
+      part.geometry.translate(-center.x, -center.y, -center.z);
+      part.name = `${old ? '2021' : '2024'} Fintoc · component ${i + 1}`;
+      motion.track(part, (t) => {
+        const born = smooth(start + i * 0.055, start + 0.65 + i * 0.055, t);
+        const split = old ? smooth(1.85 + i * 0.025, 2.9 + i * 0.025, t) : 0;
+        const gone = old ? smooth(2.55 + i * 0.025, 3.05 + i * 0.025, t) : 0;
+        const spread = i - (parts.length - 1) / 2;
+        part.position.set(
+          center.x + spread * (old ? split * 2 : (1 - born) * 1.9),
+          center.y +
+            (old
+              ? (1 - born) * -5 + Math.sin(split * Math.PI) * 8 + split * 8
+              : (1 - born) * (8 + (i % 3) * 2)),
+          center.z + ((i % 3) - 1) * (old ? split * 6 : (1 - born) * 5),
+        );
+        part.rotation.set(
+          old ? split * (i % 2 ? 1 : -1) : (1 - born) * 0.4,
+          0,
+          old ? split * spread * 0.35 : (1 - born) * spread * 0.15,
+        );
+        part.scale.setScalar(Math.max(0.001, born * (1 - gone)));
+      });
+    });
   }
   const occupied: { x: number; z: number; w: number; d: number }[] = [];
   const xRoads = [-198, -168, -138, -108, -78, -48, 45, 77, 109, 141, 173, 205],
@@ -541,10 +592,11 @@ export async function createEditableValley(
     });
     occupied.push({ x: b.x, z: b.z, w: b.width + 2, d: b.depth + 2 });
     if (b.id === 'fintoc') {
-      const logo = sculpture('fintoc-logo', 20, 0.9, fintocMat);
+      const logo = sculpture('fintoc-logo', 26, 0.9, fintocMat, true);
       logo.position.set(0, b.height + 1.1, b.depth / 2 - 0.8);
       g.add(logo);
-      box(g, 0, b.height + 0.72, b.depth / 2 - 1, 21, 0.35, 2.2, colors.roof);
+      logoPieces(logo, 4.9);
+      box(g, 0, b.height + 0.72, b.depth / 2 - 1, 27, 0.35, 2.2, colors.roof);
       const small = sculpture('fintoc-logo', 11, 0.15, fintocMat);
       small.position.set(0, b.height - 3.4, b.depth / 2 + 0.13);
       box(g, 0, b.height - 3.9, b.depth / 2 + 0.02, 13, 3.4, 0.1, colors.roof);
@@ -554,10 +606,35 @@ export async function createEditableValley(
       box(g, 2, b.height + 0.75, -2, 4.3, 0.17, 2.2, '#a06336');
     }
     if (b.id === 'startup') {
-      const logo = sculpture('fintoc-logo', 17, 0.65, fintocMat);
+      const logo = sculpture('old-fintoc-logo', 17, 0.65, undefined, true);
       logo.position.set(0, b.height + 1, b.depth / 2 - 0.5);
       g.add(logo);
-      for (let p = 0; p < 5; p++) person(g, -7 + p * 2.5, b.height + 0.8, 0, p);
+      logoPieces(logo, 0.05, true);
+      const expansion = new THREE.Group();
+      expansion.name = 'Fintoc expansion · two new floors';
+      expansion.position.y = b.height + 0.65;
+      office(expansion, b.width + 3, b.depth + 1, 6.3, facade, false);
+      batch(expansion);
+      g.add(expansion);
+      motion.track(
+        expansion,
+        (t) => (expansion.scale.y = Math.max(0.001, smooth(2.35, 3.55, t))),
+      );
+      const newLogo = sculpture('fintoc-logo', 28, 0.85, fintocMat, true);
+      newLogo.name = 'Fintoc · new identity assembled larger';
+      newLogo.position.set(0, b.height + 8.1, b.depth / 2 + 0.3);
+      g.add(newLogo);
+      logoPieces(newLogo, 2.6);
+      const terrace = new THREE.Group();
+      terrace.name = 'Fintoc rooftop team';
+      g.add(terrace);
+      for (let p = 0; p < 8; p++)
+        person(terrace, -8 + p * 2.2, b.height + 0.8, -2 + (p % 2) * 2, p);
+      batch(terrace);
+      motion.track(
+        terrace,
+        (t) => (terrace.position.y = smooth(2.35, 3.55, t) * 7),
+      );
     }
     if (b.id === 'yahoo') {
       const plate = cylinder(
@@ -624,6 +701,13 @@ export async function createEditableValley(
     }
     batch(g);
   }
+  occupied.push(
+    ...createCityLife(
+      world,
+      { mat, box, mesh, batch, person, sculpture, text },
+      motion,
+    ),
+  );
   // Mixed blocks continue past the crop. There is no floating platform or empty horizon.
   for (let z = -140; z < 285; z += 17)
     for (let x = -225; x < 225; x += 17) {
@@ -679,14 +763,17 @@ export async function createEditableValley(
     return g;
   }
   billboard(-36, -10, 20, 7, 'fintoc-logo', '#eae0cd', -0.25);
-  billboard(22, 109, 21, 8, 'fintoc-logo', '#eae0cd', 0);
-  billboard(-62, 149, 17, 6, 'facebook-lettering', '#eae0cd');
   billboard(-62, -40, 17, 6, 'facebook-lettering', '#e4ddd0');
   // Real letter-shaped buildings: red roofs, ivory walls, and glazed perimeter floors.
   let titleGroup = new THREE.Group();
   titleGroup.name = 'Title buildings';
   world.add(titleGroup);
-  let letters: { group: THREE.Group; start: number }[] = [];
+  let letters: {
+    group: THREE.Group;
+    frame: THREE.Group;
+    footing: THREE.Group;
+    start: number;
+  }[] = [];
   function rebuildTitle() {
     world.remove(titleGroup);
     titleGroup.traverse((o) => {
@@ -728,6 +815,13 @@ export async function createEditableValley(
         g.name = `Title ${row + 1} · ${char}`;
         g.position.set(cursor, 0, 11 + row * 16);
         titleGroup.add(g);
+        const frame = new THREE.Group(),
+          footing = new THREE.Group();
+        frame.name = `Exposed steel · ${row + 1} ${char}`;
+        footing.name = `Foundation · ${row + 1} ${char}`;
+        frame.position.copy(g.position);
+        footing.position.copy(g.position);
+        titleGroup.add(frame, footing);
         const height = row === 0 ? 10.8 : 9.2;
         const geo = new THREE.ExtrudeGeometry(shapes, {
           depth: height,
@@ -737,6 +831,10 @@ export async function createEditableValley(
         geo.rotateX(-Math.PI / 2);
         geo.scale(1, 1, depthScale);
         mesh(g, geo, [titleMat, mat('#d9cdbb')]);
+        const foundation = geo.clone();
+        foundation.scale(1, 0.025, 1);
+        foundation.translate(0, 0.34, 0);
+        mesh(footing, foundation, mat('#b5b2a0'));
         for (const shape of shapes) {
           const loops = [
             shape.getPoints(12),
@@ -755,6 +853,24 @@ export async function createEditableValley(
               const mx = (a.x + b.x) / 2,
                 mz = -(a.y + b.y) / 2,
                 angle = -Math.atan2(dz, dx);
+              for (let y = 2.1; y < height; y += 2.1) {
+                const rail = box(frame, mx, y, mz, len, 0.1, 0.1, '#36433f');
+                rail.rotation.y = angle;
+              }
+              if (len > 0.35) {
+                const posts = Math.max(1, Math.ceil(len / 2.3));
+                for (let k = 0; k < posts; k++)
+                  box(
+                    frame,
+                    a.x + (dx * k) / posts,
+                    0,
+                    -a.y + (dz * k) / posts,
+                    0.105,
+                    height,
+                    0.105,
+                    '#36433f',
+                  );
+              }
               for (let y = 0.85; y < height - 0.7; y += 1.45) {
                 const strip = box(g, mx, y, mz, len, 0.72, 0.035, '#6f8580');
                 strip.rotation.y = angle;
@@ -777,7 +893,13 @@ export async function createEditableValley(
             }
         }
         batch(g);
-        letters.push({ group: g, start: 5.15 + row * 0.48 + i * 0.18 });
+        batch(frame);
+        letters.push({
+          group: g,
+          frame,
+          footing,
+          start: 5.15 + row * 0.48 + i * 0.18,
+        });
         const glyph = (
           titleFont as Font & {
             data: {
@@ -981,31 +1103,6 @@ export async function createEditableValley(
       new THREE.Color(['#a9c3c8', '#cbd3bf', '#c7d0c3'][i % 3]),
     );
   }
-  const craneGroup = new THREE.Group();
-  craneGroup.name = 'Construction cranes';
-  world.add(craneGroup);
-  const cranes: THREE.Group[] = [];
-  function crane(x: number, z: number, h: number) {
-    const g = new THREE.Group();
-    g.position.set(x, 0, z);
-    craneGroup.add(g);
-    for (const dx of [-0.45, 0.45])
-      for (const dz of [-0.45, 0.45])
-        box(g, dx, 0, dz, 0.16, h, 0.16, '#d0983c');
-    for (let y = 1; y < h; y += 1.7) {
-      box(g, 0, y, 0, 1.05, 0.15, 1.05, '#d6a440');
-      const cross = box(g, 0, y, 0, 0.12, 1.9, 0.12, '#d6a440');
-      cross.rotation.z = 0.5;
-    }
-    box(g, 2.5, h, 0, 19, 0.5, 0.55, '#d9ad4d');
-    box(g, -5, h - 0.9, 0, 2.4, 0.9, 1.3, '#aaa89a');
-    box(g, 8, h - 8, 0, 0.055, 8, 0.055, '#6a6b55');
-    box(g, 8, h - 8.4, 0, 0.5, 0.4, 0.5, '#827b5b');
-    batch(g);
-    cranes.push(g);
-  }
-  crane(27, -8, 29);
-  crane(-64, -54, 20);
   // The HP helicopter has independent main and tail rotors.
   const helicopter = new THREE.Group();
   helicopter.name = 'HP helicopter';
@@ -1132,18 +1229,21 @@ export async function createEditableValley(
       const growth = b.id === 'fintoc' ? 0.24 + 0.76 * smooth(4.4, 7, t) : 1;
       b.group.scale.y = (c.height / b.base.height) * growth;
     }
-    for (const letter of letters)
+    for (const letter of letters) {
       letter.group.scale.y = Math.max(
         0.002,
         smooth(letter.start, letter.start + 1.0, t),
       );
-    cranes.forEach((g, i) => {
-      g.scale.y = Math.max(
+      letter.frame.scale.y = Math.max(
         0.001,
-        1 - smooth(7.6 + i * 0.25, 8.7 + i * 0.25, t),
+        smooth(letter.start - 3, letter.start - 1.5, t) *
+          (1 - smooth(letter.start + 0.2, letter.start + 1, t)),
       );
-      g.rotation.y = Math.sin(t * 0.4 + i) * 0.08;
-    });
+      letter.footing.scale.setScalar(
+        Math.max(0.001, smooth(letter.start - 3.8, letter.start - 2.8, t)),
+      );
+    }
+    motion.update(t);
     for (let i = 0; i < carCount; i++) {
       const c = carRoutes[i],
         p =
@@ -1279,6 +1379,30 @@ export async function createEditableValley(
             values,
           ),
         );
+        tracks.push(
+          new THREE.VectorKeyframeTrack(
+            item.frame.uuid + '.scale',
+            samples,
+            samples.flatMap((t) => [
+              1,
+              Math.max(
+                0.001,
+                smooth(item.start - 3, item.start - 1.5, t) *
+                  (1 - smooth(item.start + 0.2, item.start + 1, t)),
+              ),
+              1,
+            ]),
+          ),
+          new THREE.VectorKeyframeTrack(
+            item.footing.uuid + '.scale',
+            samples,
+            samples.flatMap((t) =>
+              Array(3).fill(
+                Math.max(0.001, smooth(item.start - 3.8, item.start - 2.8, t)),
+              ),
+            ),
+          ),
+        );
       }
       const hq = buildings.find((b) => b.id === 'fintoc')!,
         c = config.buildings.find((b) => b.id === 'fintoc')!;
@@ -1293,19 +1417,7 @@ export async function createEditableValley(
           ]),
         ),
       );
-      cranes.forEach((g, i) =>
-        tracks.push(
-          new THREE.VectorKeyframeTrack(
-            g.uuid + '.scale',
-            samples,
-            samples.flatMap((t) => [
-              1,
-              Math.max(0.001, 1 - smooth(7.6 + i * 0.25, 8.7 + i * 0.25, t)),
-              1,
-            ]),
-          ),
-        ),
-      );
+      tracks.push(...motion.bake(samples));
       tracks.push(
         new THREE.VectorKeyframeTrack(
           helicopter.uuid + '.position',
@@ -1347,7 +1459,7 @@ export async function createEditableValley(
       const geometries = new Set<THREE.BufferGeometry>(),
         materials = new Set<THREE.Material>();
       scene.traverse((o) => {
-        if (o instanceof THREE.Mesh) {
+        if (o instanceof THREE.Mesh || o instanceof THREE.LineSegments) {
           geometries.add(o.geometry);
           (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) =>
             materials.add(m),
