@@ -304,8 +304,6 @@ export default function Home() {
     playRef.current = false;
     setPlaying(false);
     audio.current?.pause();
-    current.current = FILM_DURATION;
-    setTime(FILM_DURATION);
     try {
       const blob = await engine.current.exportGLB();
       download(blob, 'fintoc-valley.glb');
@@ -684,12 +682,13 @@ export default function Home() {
                   <div className="panel-intro">
                     <h2>Iluminación</h2>
                     <p>
-                      El sol recorre la ciudad durante la intro. Las sombras y
-                      el color de la luz cambian con el paso del día.
+                      La luz alterna entre techos y fachadas durante el
+                      timelapse. Ajusta su intensidad, las sombras y el
+                      movimiento.
                     </p>
                   </div>
                   <Range
-                    label="Recorrido del sol"
+                    label="Ciclos de luz"
                     min={0}
                     max={1}
                     step={0.05}
@@ -698,6 +697,19 @@ export default function Home() {
                       setConfig((c) => ({
                         ...c,
                         lighting: { ...c.lighting, timeLapse },
+                      }))
+                    }
+                  />
+                  <Range
+                    label="Desenfoque de movimiento"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={config.lighting.shutter}
+                    onChange={(shutter) =>
+                      setConfig((c) => ({
+                        ...c,
+                        lighting: { ...c.lighting, shutter },
                       }))
                     }
                   />

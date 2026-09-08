@@ -40,7 +40,7 @@ export function createCoffeeKiosk(
   motion: ReturnType<typeof createMotion>,
 ) {
   const { box, mesh, mat, batch, person } = kit;
-  const site = { x: 33, z: -16, w: 9, d: 7 };
+  const site = { x: 29, z: -20, w: 9, d: 7 };
   const kiosk = new THREE.Group();
   kiosk.name = 'think · miniature coffee stand';
   kiosk.position.set(site.x, 0, site.z);
@@ -253,8 +253,8 @@ export function createCoffeeKiosk(
   box(arm, 0, -0.12, 0.3, 0.14, 0.14, 0.6, ivory);
   cup(arm, 0, 0.02, 0.62);
   motion.track(arm, (t) => {
-    arm.rotation.y = Math.sin(t * 3.4) * 0.24;
-    arm.rotation.x = -0.1 + Math.sin(t * 3.4 + 0.6) * 0.1;
+    arm.rotation.y = Math.sin(t * 10.2) * 0.24;
+    arm.rotation.x = -0.1 + Math.sin(t * 10.2 + 0.6) * 0.1;
   });
   batch(arm);
   batch(barista);

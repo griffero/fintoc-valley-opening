@@ -4,14 +4,16 @@ import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { DEFAULT_CONFIG, type ValleyConfig } from './scene-config';
 import { createCityLife, createMotion } from './city-life';
-import { sampleDaylight } from './solar-motion';
+import { sampleDaylight, CAMERA_HOLD } from './solar-motion';
+import { ShutterPass } from './shutter-pass';
+import { constructionStage, type CraneDelivery } from './construction-timeline';
 import { createFintocHQ } from './fintoc-hq';
 import { createCoffeeKiosk } from './coffee-kiosk';
 import {
@@ -109,14 +111,14 @@ export async function createEditableValley(
   controls.maxZoom = 6;
   controls.maxPolarAngle = Math.PI * 0.47;
   const ambient = new THREE.HemisphereLight(
-    '#c4d6ef',
-    '#9e996f',
+    '#cbd8e8',
+    '#8c7773',
     config.lighting.ambient,
   );
   scene.add(ambient);
   const sun = new THREE.DirectionalLight('#ffe3ba', config.lighting.sun);
   const sunRig = new THREE.Group();
-  sunRig.name = 'Time-lapse sun · morning to afternoon';
+  sunRig.name = 'Time-lapse daylight · alternating roof and facade';
   sun.position.set(0, 0, 0);
   sun.target.position.set(0, 0, -1);
   sun.add(sun.target);
@@ -135,7 +137,7 @@ export async function createEditableValley(
   sun.shadow.radius = 4;
   sun.name = 'Moving daylight';
   scene.add(sunRig);
-  const fill = new THREE.DirectionalLight('#a8c4e8', 0.28);
+  const fill = new THREE.DirectionalLight('#a8bde3', 0.18);
   fill.position.set(90, 40, -80);
   fill.lookAt(0, 0, 0);
   fill.target.position.set(0, 0, -1);
@@ -148,11 +150,12 @@ export async function createEditableValley(
   scene.add(exportRoot);
   const environmentTarget = outdoorEnvironment(renderer);
   scene.environment = environmentTarget.texture;
-  scene.environmentIntensity = 0.42;
+  scene.environmentIntensity = 0.22;
   const composer = new EffectComposer(renderer);
   composer.renderTarget1.samples = 4;
   composer.renderTarget2.samples = 4;
-  composer.addPass(new RenderPass(scene, camera));
+  const shutter = new ShutterPass(scene, camera, updateActors);
+  composer.addPass(shutter);
   const ao = new GTAOPass(scene, camera, 1, 1);
   ao.updateGtaoMaterial({
     radius: 3.2,
@@ -171,7 +174,20 @@ export async function createEditableValley(
   });
   ao.blendIntensity = config.lighting.occlusion;
   composer.addPass(ao);
-  composer.addPass(new OutputPass());
+  const atmosphere = new ShaderPass({
+    uniforms: { tDiffuse: { value: null }, veil: { value: 0.035 } },
+    vertexShader: `varying vec2 uv0; void main(){uv0=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+    fragmentShader: `uniform sampler2D tDiffuse; uniform float veil; varying vec2 uv0;
+      void main(){vec4 c=texture2D(tDiffuse,uv0);
+        float luma=dot(c.rgb,vec3(.2126,.7152,.0722));
+        c.rgb+=vec3(1.,.91,.82)*.0215*exp(-luma/.06);
+        float field=exp(-dot((uv0-vec2(.03,1.05))*vec2(1.8,1.7),(uv0-vec2(.03,1.05))*vec2(1.8,1.7)));
+        c.rgb=mix(c.rgb,vec3(1.55,1.24,1.03),field*veil);
+        gl_FragColor=c;}`,
+  });
+  composer.addPass(atmosphere);
+  const output = new OutputPass();
+  composer.addPass(output);
   const mats = new Map<string, THREE.MeshStandardMaterial>();
   function mat(color: string, role: SurfaceRole = 'masonry') {
     const key = `${role}:${color}`;
@@ -374,6 +390,7 @@ export async function createEditableValley(
     return group;
   }
   const motion = createMotion();
+  const deliveries: CraneDelivery[] = [];
   function logoPieces(logo: THREE.Group, start: number, old = false) {
     const parts = logo.children.filter(
       (o): o is THREE.Mesh => o instanceof THREE.Mesh,
@@ -550,6 +567,20 @@ export async function createEditableValley(
       y + 1.23,
       z,
     );
+  }
+  function pedestrian(x: number, z: number, i: number) {
+    const walker = new THREE.Group();
+    walker.name = `Time-lapse pedestrian ${i + 1}`;
+    world.add(walker);
+    person(walker, 0, 0, 0, i);
+    batch(walker);
+    motion.track(walker, (t) => {
+      const phase = (t * (0.46 + (i % 4) * 0.035) + i * 0.137) % 1;
+      const p = phase < 0.5 ? phase * 2 : 2 - phase * 2;
+      const stride = smooth(0.1, 0.9, p);
+      walker.position.set(x + (stride - 0.5) * 8, 0.2, z);
+      walker.rotation.y = phase < 0.5 ? Math.PI / 2 : -Math.PI / 2;
+    });
   }
   function office(
     parent: THREE.Object3D,
@@ -808,6 +839,7 @@ export async function createEditableValley(
       world,
       { mat, box, mesh, batch, person, sculpture, text },
       motion,
+      deliveries,
     ),
   );
   // Mixed blocks continue past the crop. There is no floating platform or empty horizon.
@@ -922,6 +954,8 @@ export async function createEditableValley(
     frame: THREE.Group;
     footing: THREE.Group;
     start: number;
+    foundationTime: number;
+    steel: { group: THREE.Group; start: number; end: number }[];
     floors: { group: THREE.Group; y: number; start: number }[];
   }[] = [];
   function rebuildTitle() {
@@ -933,6 +967,7 @@ export async function createEditableValley(
     titleGroup.name = 'Title buildings';
     world.add(titleGroup);
     letters = [];
+    deliveries.length = 0;
     for (let row = 0; row < 2; row++) {
       const word = config.title[row] || ' ';
       const measure = new TextGeometry(word, {
@@ -975,7 +1010,19 @@ export async function createEditableValley(
         const height = row === 0 ? 12.2 : 10.4;
         const count = row === 0 ? 6 : 5,
           floorHeight = height / count;
-        const start = 5.15 + row * 0.48 + i * 0.18;
+        const stage = constructionStage(row, i, word.length, count);
+        const start = stage.steel;
+        const steel = Array.from({ length: count }, (_, level) => {
+          const group = new THREE.Group();
+          group.name = `${char} · steel level ${level + 1}`;
+          group.position.y = level * floorHeight;
+          frame.add(group);
+          return {
+            group,
+            start: stage.floors[level] - 0.17,
+            end: stage.floors[level] + 0.12,
+          };
+        });
         const floors: { group: THREE.Group; y: number; start: number }[] = [];
         const extrude = (depth: number, bevel = false) => {
           const geometry = new THREE.ExtrudeGeometry(shapes, {
@@ -999,7 +1046,7 @@ export async function createEditableValley(
           floors.push({
             group: floor,
             y: level * floorHeight,
-            start: start + level * 0.13,
+            start: stage.floors[level],
           });
         }
         const cap = new THREE.Group();
@@ -1007,10 +1054,7 @@ export async function createEditableValley(
         g.add(cap);
         mesh(cap, extrude(0.2), mat('#72342e'));
         mesh(cap, extrude(0.16, true), titleMat, 0, 0.16, 0);
-        floors.push({ group: cap, y: height, start: start + count * 0.13 });
-        const foundation = extrude(0.22);
-        foundation.translate(0, 0.3, 0);
-        mesh(footing, foundation, mat('#b5b2a0'));
+        floors.push({ group: cap, y: height, start: stage.roof - 0.12 });
         for (const shape of shapes) {
           const loops = [
             shape.getPoints(12),
@@ -1029,23 +1073,44 @@ export async function createEditableValley(
               const mx = (a.x + b.x) / 2,
                 mz = -(a.y + b.y) / 2,
                 angle = -Math.atan2(dz, dx);
-              for (let y = 2.1; y < height; y += 2.1) {
-                const rail = box(frame, mx, y, mz, len, 0.1, 0.1, '#36433f');
+              for (const level of steel) {
+                const rail = box(
+                  level.group,
+                  mx,
+                  floorHeight - 0.1,
+                  mz,
+                  len,
+                  0.1,
+                  0.1,
+                  '#36433f',
+                );
                 rail.rotation.y = angle;
               }
               if (len > 0.35) {
                 const posts = Math.max(1, Math.ceil(len / 2.3));
-                for (let k = 0; k < posts; k++)
+                for (let k = 0; k < posts; k++) {
                   box(
-                    frame,
+                    footing,
                     a.x + (dx * k) / posts,
-                    0,
+                    0.08,
                     -a.y + (dz * k) / posts,
-                    0.105,
-                    height,
-                    0.105,
-                    '#36433f',
+                    0.65,
+                    0.18,
+                    0.65,
+                    '#b5b2a0',
                   );
+                  for (const level of steel)
+                    box(
+                      level.group,
+                      a.x + (dx * k) / posts,
+                      0,
+                      -a.y + (dz * k) / posts,
+                      0.105,
+                      floorHeight,
+                      0.105,
+                      '#36433f',
+                    );
+                }
               }
               for (let level = 0; level < count; level++) {
                 const floor = floors[level].group;
@@ -1090,11 +1155,36 @@ export async function createEditableValley(
         floors.forEach((floor) => batch(floor.group));
         batch(g);
         batch(frame);
+        steel.forEach((level) => batch(level.group));
+        if (
+          (row === 0 && [0, 1, 4, 5, 6].includes(i)) ||
+          (row === 1 && [1, 4].includes(i))
+        ) {
+          g.updateWorldMatrix(true, true);
+          const bounds = new THREE.Box3().setFromObject(cap);
+          const center = bounds.getCenter(new THREE.Vector3());
+          const roof = !(row === 0 && [0, 5].includes(i));
+          const tx =
+            row === 0 && i === 4
+              ? bounds.min.x + 0.6
+              : row === 0 && i === 5
+                ? bounds.max.x - 0.6
+                : center.x;
+          deliveries.push({
+            time: roof ? stage.roof : stage.floors[2] + 0.12,
+            target: [tx, roof ? height + 0.32 : 3 * floorHeight, center.z],
+            row,
+            index: i,
+            roof,
+          });
+        }
         letters.push({
           group: g,
           frame,
           footing,
           start,
+          foundationTime: stage.foundation,
+          steel,
           floors,
         });
         const glyph = (
@@ -1114,6 +1204,40 @@ export async function createEditableValley(
     }
   }
   rebuildTitle();
+  // The previous low-rise campus is cleared before the first title foundations.
+  for (let i = 0; i < 8; i++) {
+    const block = new THREE.Group();
+    block.name = `Previous campus · demolition ${i + 1}`;
+    block.position.set(-28 + (i % 4) * 19, 0, 5 + Math.floor(i / 4) * 16);
+    office(block, 13, 7, 3.6 + (i % 3) * 0.7, mat('#dfd6c7'), false);
+    batch(block);
+    world.add(block);
+    motion.track(block, (t) => {
+      const gone = smooth(3.25 + i * 0.025, 3.6 + i * 0.023, t);
+      block.position.y = -7 * gone;
+      block.scale.setScalar(gone >= 1 ? 0.001 : 1);
+    });
+    for (let chunk = 0; chunk < 3; chunk++) {
+      const debris = new THREE.Group();
+      debris.name = 'Demolition debris';
+      box(debris, 0, 0, 0, 0.7, 0.55, 0.65, '#b8aa94');
+      world.add(debris);
+      motion.track(debris, (t) => {
+        const p = THREE.MathUtils.clamp(
+          (t - 3.28 - i * 0.025 - chunk * 0.018) / 0.46,
+          0,
+          1,
+        );
+        debris.scale.setScalar(p > 0 && p < 1 ? 1 : 0.001);
+        debris.position.set(
+          block.position.x + (chunk - 1) * (2 + p * 3),
+          0.2 + Math.sin(p * Math.PI) * 3.7,
+          block.position.z + (chunk % 2 ? -1 : 1) * p * 3,
+        );
+        debris.rotation.set(p * 5, p * 3, p * 4);
+      });
+    }
+  }
   // Low-poly trees are individually placed instances and remain real exportable meshes.
   const treePositions: { x: number; z: number; s: number }[] = [];
   for (let i = 0; i < 7000; i++) {
@@ -1301,22 +1425,6 @@ export async function createEditableValley(
     direction: i % 3 === 0 ? -1 : 1,
     bridge: i > 55,
   }));
-  // Short subframe silhouettes soften fast vehicles while leaving architecture sharp.
-  // This is a lightweight motion-blur approximation, not a whole-frame blur filter.
-  const trafficTrails = [0.09, 0.045].map((opacity, sample) => {
-    const material = new THREE.MeshStandardMaterial({
-      color: '#ffffff',
-      roughness: 0.7,
-      transparent: true,
-      opacity,
-      depthWrite: false,
-    });
-    const trails = new THREE.InstancedMesh(carSpecs[0].g, material, carCount);
-    trails.name = `Traffic shutter sample ${sample + 1}`;
-    trails.receiveShadow = true;
-    world.add(trails);
-    return trails;
-  });
   for (let i = 0; i < carCount; i++) {
     carMeshes[0].setColorAt(
       i,
@@ -1336,9 +1444,6 @@ export async function createEditableValley(
       i,
       new THREE.Color(['#a9c3c8', '#cbd3bf', '#c7d0c3'][i % 3]),
     );
-    const paint = new THREE.Color();
-    carMeshes[0].getColorAt(i, paint);
-    trafficTrails.forEach((trails) => trails.setColorAt(i, paint));
   }
   // The HP helicopter has independent main and tail rotors.
   const helicopter = new THREE.Group();
@@ -1372,6 +1477,21 @@ export async function createEditableValley(
   box(rotor, 0, 0, 0, 8, 0.1, 0.17, '#485149');
   const tailRotor = box(helicopter, 0, 0.5, -4, 0.08, 0.1, 1.7, '#434b43');
   tailRotor.rotation.z = Math.PI / 2;
+  motion.track(helicopter, (t) => {
+    const arrival = smooth(6.1, 8.0, t);
+    helicopter.position.set(
+      61 + (1 - arrival) * 29 + Math.sin(t * 1.7) * 0.65,
+      22 + (1 - arrival) * 8 + Math.sin(t * 2.3) * 0.25,
+      15 - (1 - arrival) * 18 + Math.cos(t * 1.7) * 0.65,
+    );
+    helicopter.rotation.y = -0.7 + arrival * 0.5;
+  });
+  motion.track(rotor, (t) => {
+    rotor.rotation.y = t * 150;
+  });
+  motion.track(tailRotor, (t) => {
+    tailRotor.rotation.x = t * 190;
+  });
   // Street furniture and rooftop activity add scale without a texture backdrop.
   for (let i = 0; i < 65; i++) {
     const x = (i % 13) * 8 - 45,
@@ -1382,7 +1502,7 @@ export async function createEditableValley(
       )
     )
       continue;
-    person(world, x, 0.2, z, i);
+    pedestrian(x, z, i);
   }
   for (const x of [-44, 40])
     for (let z = -20; z < 35; z += 11) {
@@ -1454,8 +1574,7 @@ export async function createEditableValley(
     }
     render(time);
   }
-  function render(t: number) {
-    time = t;
+  function updateActors(t: number) {
     for (const b of buildings) {
       const c = config.buildings.find((c) => c.id === b.id)!;
       b.group.scale.y = c.height / b.base.height;
@@ -1466,26 +1585,30 @@ export async function createEditableValley(
       for (const floor of letter.floors) {
         floor.group.scale.setScalar(t < floor.start ? 0.001 : 1);
         floor.group.position.y =
-          floor.y + 0.9 * (1 - smooth(floor.start, floor.start + 0.18, t));
+          floor.y + 0.35 * (1 - smooth(floor.start, floor.start + 0.12, t));
       }
-      letter.frame.scale.y = Math.max(
-        0.001,
-        smooth(letter.start - 3, letter.start - 1.5, t) *
-          (1 - smooth(letter.start + 0.2, letter.start + 1, t)),
-      );
-      letter.footing.scale.setScalar(
-        Math.max(0.001, smooth(letter.start - 3.8, letter.start - 2.8, t)),
-      );
+      for (const level of letter.steel) {
+        level.group.scale.setScalar(
+          t >= level.start && t < level.end ? 1 : 0.001,
+        );
+      }
+      letter.footing.scale.setScalar(t >= letter.foundationTime ? 1 : 0.001);
     }
     parcelMat.color
       .set(config.palette.grass)
-      .lerp(new THREE.Color('#9a8e66'), smooth(0.7, 2.1, t))
-      .lerp(roadMat.color, smooth(4.8, 7.2, t));
+      .lerp(new THREE.Color('#9a8e66'), smooth(3.2, 3.75, t))
+      .lerp(roadMat.color, smooth(6.45, 7.35, t));
     motion.update(t);
     for (let i = 0; i < carCount; i++) {
       const c = carRoutes[i],
         p =
-          ((((c.phase * 300 + t * c.speed * c.direction) % 300) + 300) % 300) -
+          ((((c.phase * 300 +
+            (t + 0.065 * Math.sin(t * 7 + c.phase * 20)) *
+              c.speed *
+              c.direction) %
+            300) +
+            300) %
+            300) -
           150;
       temp.rotation.set(
         0,
@@ -1516,41 +1639,15 @@ export async function createEditableValley(
       temp.scale.set(1, i % 13 === 0 ? 1.25 : 1, i % 13 === 0 ? 1.6 : 1);
       temp.updateMatrix();
       carMeshes.forEach((m) => m.setMatrixAt(i, temp.matrix));
-      trafficTrails.forEach((trails, sample) => {
-        const shutter = (sample + 1) / 90;
-        const previous = p - c.speed * c.direction * shutter;
-        temp.position.set(
-          c.bridge
-            ? previous
-            : c.axis
-              ? (c.lane === 45 ? avenueX(previous) : c.lane) +
-                c.direction * 1.55
-              : previous,
-          c.bridge ? 4.82 : 0.12,
-          c.bridge
-            ? 79 - previous * previous * 0.0016 + c.direction * 1.6
-            : c.axis
-              ? previous
-              : c.lane + c.direction * 1.55,
-        );
-        temp.updateMatrix();
-        trails.setMatrixAt(i, temp.matrix);
-      });
     }
     carMeshes.forEach((m) => (m.instanceMatrix.needsUpdate = true));
-    trafficTrails.forEach((m) => (m.instanceMatrix.needsUpdate = true));
-    helicopter.position.set(
-      61 + Math.sin(t * 0.27) * 4,
-      22 + Math.sin(t * 0.8) * 0.4,
-      15 + Math.cos(t * 0.27) * 4,
-    );
-    helicopter.rotation.y = -0.4 + t * 0.12;
-    rotor.rotation.y = t * 42;
-    tailRotor.rotation.x = t * 50;
+    updateView(t);
+  }
+  function updateView(t: number) {
     if (!freeCamera) {
       // Measured from yU+co's plate: scale .672 → 1 over frames 0–183, then a hold.
       // This is an advancing camera with a gentle push in, not an orbit or pullback.
-      const p = THREE.MathUtils.clamp(t / (183 / (24000 / 1001)), 0, 1),
+      const p = THREE.MathUtils.clamp(t / CAMERA_HOLD, 0, 1),
         scale = 0.672 + 0.328 * p;
       const az = THREE.MathUtils.degToRad(config.camera.azimuth),
         el = THREE.MathUtils.degToRad(config.camera.elevation);
@@ -1559,7 +1656,10 @@ export async function createEditableValley(
         dy = (1 - scale) * (-1048 - 540);
       const right = new THREE.Vector3(Math.cos(az), 0, -Math.sin(az)),
         forward = new THREE.Vector3(Math.sin(az), 0, Math.cos(az));
+      // Reframe the corrected 27°/46° view while preserving the measured push.
       const target = new THREE.Vector3(0, 3, 16)
+        .addScaledVector(right, 4.9)
+        .addScaledVector(forward, -9.5)
         .addScaledVector(right, -dx / (scale * pixelScale))
         .addScaledVector(forward, -dy / (scale * pixelScale * Math.sin(el)));
       camera.position
@@ -1590,7 +1690,14 @@ export async function createEditableValley(
     sun.color.copy(daylight.color);
     sun.intensity = config.lighting.sun * daylight.sunFactor;
     ambient.intensity = config.lighting.ambient * daylight.ambientFactor;
+    atmosphere.uniforms.veil.value = daylight.haze;
     sunRig.updateMatrixWorld(true);
+  }
+  function render(t: number, samples = 3) {
+    time = t;
+    shutter.time = t;
+    shutter.samples = freeCamera ? 1 : samples;
+    shutter.exposure = freeCamera ? 0 : config.lighting.shutter / 24;
     composer.render();
   }
   function resize() {
@@ -1630,122 +1737,124 @@ export async function createEditableValley(
       render(time);
     },
     async exportGLB() {
-      selection.visible = false;
-      render(10.9);
-      const tracks: THREE.KeyframeTrack[] = [];
-      const samples = [
-        ...new Set([
-          ...Array.from({ length: 132 }, (_, i) => (i * 10.9) / 131),
-          ...letters.flatMap((letter) =>
-            letter.floors.map((floor) => floor.start),
-          ),
-        ]),
-      ]
-        .filter((t) => t <= 10.9)
-        .sort((a, b) => a - b);
-      for (const item of letters) {
-        for (const floor of item.floors) {
+      const previousTime = time;
+      const previousSelection = selection.visible;
+      try {
+        selection.visible = false;
+        render(10.9);
+        const tracks: THREE.KeyframeTrack[] = [];
+        const samples = [
+          ...new Set([
+            ...Array.from({ length: 263 }, (_, i) => (i * 10.9) / 262),
+            ...deliveries.flatMap((job) => [
+              job.time - 0.588,
+              job.time - 0.0001,
+              job.time,
+              job.time + 0.12,
+            ]),
+            ...letters.flatMap((letter) => [
+              ...letter.floors.map((floor) => floor.start),
+              ...letter.steel.flatMap((level) => [level.start, level.end]),
+              letter.foundationTime,
+            ]),
+          ]),
+        ]
+          .filter((t) => t <= 10.9)
+          .sort((a, b) => a - b);
+        for (const item of letters) {
+          for (const floor of item.floors) {
+            tracks.push(
+              new THREE.VectorKeyframeTrack(
+                floor.group.uuid + '.scale',
+                samples,
+                samples.flatMap((t) =>
+                  Array(3).fill(t < floor.start ? 0.001 : 1),
+                ),
+                THREE.InterpolateDiscrete,
+              ),
+            );
+            tracks.push(
+              new THREE.VectorKeyframeTrack(
+                floor.group.uuid + '.position',
+                samples,
+                samples.flatMap((t) => [
+                  0,
+                  floor.y +
+                    0.35 * (1 - smooth(floor.start, floor.start + 0.12, t)),
+                  0,
+                ]),
+              ),
+            );
+          }
+          for (const level of item.steel) {
+            tracks.push(
+              new THREE.VectorKeyframeTrack(
+                level.group.uuid + '.scale',
+                samples,
+                samples.flatMap((t) =>
+                  Array(3).fill(t >= level.start && t < level.end ? 1 : 0.001),
+                ),
+                THREE.InterpolateDiscrete,
+              ),
+            );
+          }
           tracks.push(
             new THREE.VectorKeyframeTrack(
-              floor.group.uuid + '.scale',
+              item.footing.uuid + '.scale',
               samples,
               samples.flatMap((t) =>
-                Array(3).fill(t < floor.start ? 0.001 : 1),
+                Array(3).fill(t >= item.foundationTime ? 1 : 0.001),
               ),
               THREE.InterpolateDiscrete,
             ),
           );
-          tracks.push(
-            new THREE.VectorKeyframeTrack(
-              floor.group.uuid + '.position',
-              samples,
-              samples.flatMap((t) => [
-                0,
-                floor.y +
-                  0.9 * (1 - smooth(floor.start, floor.start + 0.18, t)),
-                0,
-              ]),
-            ),
-          );
         }
+        const hq = buildings.find((b) => b.id === 'fintoc')!,
+          c = config.buildings.find((b) => b.id === 'fintoc')!;
         tracks.push(
           new THREE.VectorKeyframeTrack(
-            item.frame.uuid + '.scale',
+            hq.group.uuid + '.position',
             samples,
             samples.flatMap((t) => [
-              1,
-              Math.max(
-                0.001,
-                smooth(item.start - 3, item.start - 1.5, t) *
-                  (1 - smooth(item.start + 0.2, item.start + 1, t)),
-              ),
-              1,
+              c.x,
+              -(c.height + 7) * (1 - smooth(4.4, 7, t)),
+              c.z,
             ]),
           ),
-          new THREE.VectorKeyframeTrack(
-            item.footing.uuid + '.scale',
+        );
+        tracks.push(...motion.bake(samples));
+        tracks.push(
+          new THREE.QuaternionKeyframeTrack(
+            sunRig.uuid + '.quaternion',
             samples,
             samples.flatMap((t) =>
-              Array(3).fill(
-                Math.max(0.001, smooth(item.start - 3.8, item.start - 2.8, t)),
-              ),
+              sampleDaylight(
+                t,
+                config.lighting.elevation,
+                config.lighting.timeLapse,
+              ).rotation.toArray(),
             ),
           ),
         );
+        const exportedNodes = new Set<string>();
+        exportRoot.traverseVisible((node) => exportedNodes.add(node.uuid));
+        const clip = new THREE.AnimationClip(
+          'Silicon Valley opening',
+          10.9,
+          tracks.filter((track) => exportedNodes.has(track.name.split('.')[0])),
+        );
+        const exporter = new GLTFExporter();
+        const file = await exporter.parseAsync(exportRoot, {
+          binary: true,
+          onlyVisible: true,
+          trs: true,
+          animations: [clip],
+        });
+        return new Blob([file as ArrayBuffer], { type: 'model/gltf-binary' });
+      } finally {
+        selection.visible = previousSelection;
+        render(previousTime);
       }
-      const hq = buildings.find((b) => b.id === 'fintoc')!,
-        c = config.buildings.find((b) => b.id === 'fintoc')!;
-      tracks.push(
-        new THREE.VectorKeyframeTrack(
-          hq.group.uuid + '.position',
-          samples,
-          samples.flatMap((t) => [
-            c.x,
-            -(c.height + 7) * (1 - smooth(4.4, 7, t)),
-            c.z,
-          ]),
-        ),
-      );
-      tracks.push(...motion.bake(samples));
-      tracks.push(
-        new THREE.QuaternionKeyframeTrack(
-          sunRig.uuid + '.quaternion',
-          samples,
-          samples.flatMap((t) =>
-            sampleDaylight(
-              t,
-              config.lighting.elevation,
-              config.lighting.timeLapse,
-            ).rotation.toArray(),
-          ),
-        ),
-      );
-      tracks.push(
-        new THREE.VectorKeyframeTrack(
-          helicopter.uuid + '.position',
-          samples,
-          samples.flatMap((t) => [
-            61 + Math.sin(t * 0.27) * 4,
-            22 + Math.sin(t * 0.8) * 0.4,
-            15 + Math.cos(t * 0.27) * 4,
-          ]),
-        ),
-      );
-      const exportedNodes = new Set<string>();
-      exportRoot.traverseVisible((node) => exportedNodes.add(node.uuid));
-      const clip = new THREE.AnimationClip(
-        'Silicon Valley opening',
-        10.9,
-        tracks.filter((track) => exportedNodes.has(track.name.split('.')[0])),
-      );
-      const exporter = new GLTFExporter();
-      const file = await exporter.parseAsync(exportRoot, {
-        binary: true,
-        onlyVisible: true,
-        trs: true,
-        animations: [clip],
-      });
-      return new Blob([file as ArrayBuffer], { type: 'model/gltf-binary' });
     },
     snapshot() {
       selection.visible = false;
@@ -1756,6 +1865,11 @@ export async function createEditableValley(
       observer.disconnect();
       controls.dispose();
       ao.dispose();
+      ao.gtaoMaterial.dispose();
+      ao.blendMaterial.dispose();
+      shutter.dispose();
+      atmosphere.dispose();
+      output.dispose();
       composer.dispose();
       environmentTarget.dispose();
       renderer.domElement.removeEventListener('pointerdown', onDown);

@@ -423,14 +423,15 @@ export function createFintocHQ(
           0,
         );
       motion.track(arm, (t) => {
-        arm.rotation.z = side * (2.2 + Math.sin(t * 3.8 + i * 1.7) * 0.38);
-        arm.rotation.x = Math.sin(t * 2.3 + i) * 0.18;
+        arm.rotation.z = side * (2.2 + Math.sin(t * 11.4 + i * 1.7) * 0.38);
+        arm.rotation.x = Math.sin(t * 6.9 + i) * 0.18;
       });
     }
     motion.track(p, (t) => {
       p.position.y =
-        Math.max(0, Math.sin(t * 4.2 + i * 1.1)) * (i % 3 === 0 ? 0.12 : 0.035);
-      p.rotation.y = ((i % 3) - 1) * 0.6 + Math.sin(t * 2.1 + i) * 0.14;
+        Math.max(0, Math.sin(t * 12.6 + i * 1.1)) *
+        (i % 3 === 0 ? 0.12 : 0.035);
+      p.rotation.y = ((i % 3) - 1) * 0.6 + Math.sin(t * 6.3 + i) * 0.14;
     });
     batch(p);
   }

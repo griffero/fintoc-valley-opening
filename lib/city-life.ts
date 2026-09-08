@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { TessellateModifier } from 'three/addons/modifiers/TessellateModifier.js';
 import { taskMotion } from './task-motion';
+import type { CraneDelivery } from './construction-timeline';
 import type { SurfaceRole } from './outdoor-materials';
 
 export const ease = (a: number, b: number, t: number) => {
@@ -26,36 +27,58 @@ export function createMotion() {
       actors.forEach((a) => a.update(t));
     },
     bake(samples: number[]) {
-      const tracks: THREE.KeyframeTrack[] = [];
-      for (const { object, update } of actors) {
-        const original = {
-          p: object.position.clone(),
-          q: object.quaternion.clone(),
-          s: object.scale.clone(),
-        };
-        const p: number[] = [],
-          q: number[] = [],
-          s: number[] = [];
+      const original = actors.map(({ object }) => ({
+        p: object.position.clone(),
+        r: object.rotation.clone(),
+        s: object.scale.clone(),
+      }));
+      const values = actors.map(() => ({
+        p: [] as number[],
+        q: [] as number[],
+        s: [] as number[],
+      }));
+      // Sample the whole scene together: crane actions also move their children.
+      try {
         for (const t of samples) {
-          update(t);
-          p.push(...object.position.toArray());
-          q.push(...object.quaternion.toArray());
-          s.push(...object.scale.toArray());
+          actors.forEach(({ update }) => update(t));
+          actors.forEach(({ object }, i) => {
+            values[i].p.push(...object.position.toArray());
+            values[i].q.push(...object.quaternion.toArray());
+            values[i].s.push(...object.scale.toArray());
+          });
         }
-        tracks.push(
-          new THREE.VectorKeyframeTrack(object.uuid + '.position', samples, p),
-          new THREE.QuaternionKeyframeTrack(
-            object.uuid + '.quaternion',
-            samples,
-            q,
-          ),
-          new THREE.VectorKeyframeTrack(object.uuid + '.scale', samples, s),
-        );
-        object.position.copy(original.p);
-        object.quaternion.copy(original.q);
-        object.scale.copy(original.s);
+        const tracks: THREE.KeyframeTrack[] = [];
+        actors.forEach(({ object }, i) => {
+          tracks.push(
+            new THREE.VectorKeyframeTrack(
+              object.uuid + '.position',
+              samples,
+              values[i].p,
+            ),
+            new THREE.QuaternionKeyframeTrack(
+              object.uuid + '.quaternion',
+              samples,
+              values[i].q,
+            ),
+            new THREE.VectorKeyframeTrack(
+              object.uuid + '.scale',
+              samples,
+              values[i].s,
+              object.userData.stepScale
+                ? THREE.InterpolateDiscrete
+                : THREE.InterpolateLinear,
+            ),
+          );
+        });
+        return tracks;
+      } finally {
+        actors.forEach(({ object }, i) => {
+          object.position.copy(original[i].p);
+          // Preserve Euler branches: partial-axis animators depend on them.
+          object.rotation.copy(original[i].r);
+          object.scale.copy(original[i].s);
+        });
       }
-      return tracks;
     },
   };
 }
@@ -111,6 +134,7 @@ export function createCityLife(
   world: THREE.Group,
   kit: Kit,
   motion: ReturnType<typeof createMotion>,
+  deliveries: CraneDelivery[],
 ) {
   const { mat, box, mesh, batch, person, sculpture } = kit;
   const reserved: { x: number; z: number; w: number; d: number }[] = [];
@@ -454,7 +478,14 @@ export function createCityLife(
   tank(observatory, -8, 7.5, -6, 1.4, 2);
   batch(observatory);
 
-  function crane(x: number, z: number, h: number, phase: number, end = 7.8) {
+  function crane(
+    x: number,
+    z: number,
+    h: number,
+    phase: number,
+    end = 7.8,
+    role?: 'left' | 'right' | 'front',
+  ) {
     const base = group(set, 'Tower crane · lattice mast', x, 0, z);
     box(base, 0, 0, 0, 3, 0.7, 3, '#858b7a');
     for (const dx of [-0.55, 0.55])
@@ -487,7 +518,7 @@ export function createCityLife(
       }
     const boom = group(base, 'Slewing triangular jib', 0, h, 0);
     const rear = -6,
-      tip = 15;
+      tip = role ? 27 : 15;
     for (const z of [-0.58, 0.58])
       beam(boom, [rear, 0, z], [tip, 0, z], 0.1, yellow);
     beam(boom, [rear, 1.25, 0], [tip, 1.25, 0], 0.095, yellow);
@@ -513,19 +544,86 @@ export function createCityLife(
     box(hook, 0, -0.3, 0, 0.7, 0.5, 0.55, '#b5a22f');
     beam(hook, [0, -0.3, 0], [-2, -1.6, 0], 0.03, steel);
     beam(hook, [0, -0.3, 0], [2, -1.6, 0], 0.03, steel);
-    box(hook, 0, -3.3, 0, 4.7, 1.7, 0.3, ivory);
+    const load = group(
+      hook,
+      'Facade panel carried to installation',
+      0,
+      -3.3,
+      0,
+    );
+    box(load, 0, -0.85, 0, 4.7, 1.7, 0.3, ivory);
     for (let i = -1; i <= 1; i++)
-      box(hook, i * 1.3, -3.1, 0.17, 1.05, 1.05, 0.06, glass);
+      box(load, i * 1.3, -0.6, 0.17, 1.05, 1.05, 0.06, glass);
+    const roofLoad = group(hook, 'Roof finishing piece', 0, -3.3, 0);
+    box(roofLoad, 0, -0.12, 0, 3.4, 0.24, 2, '#ca1432');
+    roofLoad.scale.setScalar(0.001);
+    load.userData.stepScale = roofLoad.userData.stepScale = true;
+    batch(load);
+    batch(roofLoad);
     batch(hook);
     batch(trolley);
     batch(cable);
     batch(boom);
     batch(base);
-    motion.track(
-      base,
-      (t) => (base.scale.y = Math.max(0.001, 1 - ease(end, end + 0.95, t))),
-    );
-    const cycle = 1.8 + Math.abs(phase) * 0.23;
+    motion.track(base, (t) => {
+      base.scale.setScalar(t > end + 0.28 ? 0.001 : 1);
+      if (role) base.position.y = -(h + 8) * ease(end, end + 0.28, t);
+    });
+    if (role) {
+      const jobs = () =>
+        deliveries
+          .filter((job) =>
+            role === 'left'
+              ? (job.row === 0 && job.index <= 1) ||
+                (job.row === 1 && job.index === 1)
+              : role === 'right'
+                ? job.row === 0 && job.index >= 4
+                : job.row === 1 && job.index === 4,
+          )
+          .sort((a, b) => a.time - b.time);
+      motion.track(boom, (t) => {
+        const list = jobs();
+        const job = list.find((item) => t < item.time + 0.12) ?? list.at(-1);
+        if (!job) return;
+        const p = (t - job.time + 0.6) / 0.6;
+        const dx = job.target[0] - x,
+          dz = job.target[2] - z;
+        const angle = Math.atan2(-dz, dx);
+        const radius = Math.min(25.8, Math.hypot(dx, dz));
+        const turn = ease(0.23, 0.62, p);
+        const parked = phase + 0.6;
+        boom.rotation.y = THREE.MathUtils.lerp(parked, angle, turn);
+        trolley.position.x = THREE.MathUtils.lerp(
+          7.5,
+          radius,
+          ease(0.26, 0.64, p),
+        );
+        const raised = THREE.MathUtils.lerp(h - 3.7, 3.0, ease(0.02, 0.23, p));
+        const atSite = THREE.MathUtils.lerp(
+          raised,
+          Math.max(1.5, h - job.target[1] - 3.3),
+          ease(0.66, 1, p),
+        );
+        const length = THREE.MathUtils.lerp(
+          atSite,
+          3.0,
+          ease(job.time, job.time + 0.12, t),
+        );
+        cable.scale.y = length;
+        hook.position.y = -length;
+        hook.rotation.y = -boom.rotation.y;
+        load.scale.setScalar(
+          p >= 0.02 && t < job.time && !job.roof ? 1 : 0.001,
+        );
+        roofLoad.scale.setScalar(
+          p >= 0.02 && t < job.time && job.roof ? 1 : 0.001,
+        );
+      });
+      for (const child of [trolley, cable, hook, load, roofLoad])
+        motion.track(child, () => {});
+      return base;
+    }
+    const cycle = 0.62 + Math.abs(phase) * 0.09;
     const task = (t: number, keys: readonly (readonly [number, number])[]) =>
       taskMotion(Math.min(t, end), cycle, phase * 0.31, keys);
     const hoist = (t: number) =>
@@ -567,16 +665,19 @@ export function createCityLife(
     motion.track(cable, (t) => (cable.scale.y = hoist(t)));
     motion.track(hook, (t) => {
       hook.position.y = -hoist(t);
-      hook.rotation.z = Math.sin(t * 11 + phase) * 0.022;
+      hook.rotation.z = Math.sin(t * 29 + phase) * 0.022;
+      const p = (((t / cycle + phase * 0.31) % 1) + 1) % 1;
+      load.scale.setScalar(p < 0.67 || p > 0.96 ? 1 : 0.001);
     });
+    motion.track(load, () => {});
     return base;
   }
   crane(30, 91, 25, 0.5, 5.8);
   crane(-34, 107, 27, -0.4, 4.5);
   crane(29, 143, 24, 1.7, 4.7);
-  crane(27, -8, 29, -0.4, 7.6);
-  crane(-23, 1, 23, 1.3, 7.1);
-  crane(8, 30, 21, 2.2, 7.3);
+  crane(27, -8, 29, -0.4, 6.72, 'right');
+  crane(-23, 1, 23, 1.3, 7.1, 'left');
+  crane(8, 30, 21, 2.2, 7.26, 'front');
   crane(-64, -54, 20, 1.4, 8);
   const folded = crane(-67, 116, 15, -0.9, 3.6);
   folded.position.y = 8.5;
@@ -927,11 +1028,11 @@ export function createCityLife(
     batch(basket);
     batch(envelope);
     motion.track(flight, (t) => {
-      const lift = ease(0.2 + phase, 1.6 + phase, t),
-        land = ease(3.8 + phase, 5.4 + phase, t);
+      const lift = ease(1.75 + phase * 0.5, 2.65 + phase * 0.5, t),
+        land = ease(3.35 + phase * 0.35, 3.92 + phase * 0.35, t);
       flight.position.set(
-        x + Math.sin(t * 0.8 + phase) * 1.6 * lift,
-        0.2 + (7 + Math.sin(t * 1.3 + phase)) * lift * (1 - land),
+        x + (Math.sin(t * 3.6 + phase) * 0.45 + (t - 2) * 1.2) * lift,
+        0.2 + (8.5 + Math.sin(t * 4.3 + phase) * 0.35) * lift * (1 - land),
         z - t * 0.7 * lift,
       );
       flight.rotation.set(
@@ -943,13 +1044,14 @@ export function createCityLife(
     });
     motion.track(envelope, (t) => {
       const inflation =
-        ease(-0.4 + phase, 1.1 + phase, t) *
-        (1 - ease(4.1 + phase, 5.9 + phase, t));
+        ease(1.25 + phase * 0.5, 2.15 + phase * 0.5, t) *
+        (1 - ease(3.38 + phase * 0.35, 3.95 + phase * 0.35, t));
       envelope.scale.set(1, 0.1 + 0.9 * inflation, 1);
     });
     motion.track(flame, (t) =>
       flame.scale.setScalar(
-        (0.6 + Math.sin(t * 24 + phase) * 0.25) * (1 - ease(4, 5, t)) + 0.001,
+        (0.6 + Math.sin(t * 24 + phase) * 0.25) * (1 - ease(3.35, 3.9, t)) +
+          0.001,
       ),
     );
   }

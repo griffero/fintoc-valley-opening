@@ -20,8 +20,8 @@ export function outdoorEnvironment(renderer: THREE.WebGLRenderer) {
   const geometry = new THREE.SphereGeometry(100, 64, 32);
   const positions = geometry.getAttribute('position');
   const colors = new Float32Array(positions.count * 3);
-  const ground = new THREE.Color('#716d55');
-  const horizon = new THREE.Color('#e1e5dc');
+  const ground = new THREE.Color('#847774');
+  const horizon = new THREE.Color('#eee5de');
   const zenith = new THREE.Color('#8eaec8');
   const cloud = new THREE.Color('#f1f0e7');
   const color = new THREE.Color();

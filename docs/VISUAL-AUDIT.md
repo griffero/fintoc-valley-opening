@@ -1,4 +1,16 @@
-# Auditoría visual: Silicon Valley × Fintoc
+# Actualización v1 · 8 de septiembre de 2026
+
+Se aplicó la auditoría posterior al MP4 v0: ciclos direccionales de luz de un segundo, cámara 27°/46° y encuadre corregido, menos relleno uniforme, velo cálido localizado, exposición temporal con subfotogramas reales, revelación tardía del título, dos frentes de construcción, siete entregas de grúa sincronizadas, globos/peatones/gestos más rápidos y demolición de campus previos. Se preservan los edificios finales, la terraza triangular y los logotipos vectoriales.
+
+La comparación nueva confirma que el avance, la escala temporal y la pausa a 7.6326 s ya coincidían; esas partes se conservaron. La alternancia techo/lateral medida en un mismo edificio no se puede reproducir solo subiendo y bajando exposición: por eso se anima principalmente la dirección de la luz. No se afirma haber reconstruido ciclos astronómicos exactos.
+
+Los registros de exportación local y comparaciones están en el directorio de trabajo ignorado. La escena sigue siendo editable y no contiene el video original como fondo.
+
+---
+
+# Archivo de auditoría v0: Silicon Valley × Fintoc
+
+Los hallazgos siguientes documentan la versión anterior; la actualización v1 descrita arriba sustituye sus estelas geométricas y su curva solar lenta.
 
 Fecha: 7 de septiembre de 2026. Objetivo: acercar la arquitectura, la respuesta de materiales y la sensación de tiempo acelerado, manteniendo una escena 3D editable.
 

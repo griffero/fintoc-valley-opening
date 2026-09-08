@@ -1,49 +1,55 @@
 import * as THREE from 'three';
 
-const morning = new THREE.Color('#ffd1a3');
-const noon = new THREE.Color('#fff5e2');
-const afternoon = new THREE.Color('#ffe3ba');
 const origin = new THREE.Vector3();
 const up = new THREE.Vector3(0, 1, 0);
-const smooth = (p: number) => p * p * (3 - 2 * p);
+const smooth = (a: number, b: number, time: number) => {
+  const p = THREE.MathUtils.clamp((time - a) / (b - a), 0, 1);
+  return p * p * (3 - 2 * p);
+};
+export const CAMERA_HOLD = 183 / (24000 / 1001);
 
-/** An accelerated daylight arc, anchored to the established final-frame lighting. */
+/** Alternating roof/side daylight measured on a fixed roof in yU+co's opening. */
 export function sampleDaylight(
   time: number,
   baseElevation: number,
   amount = 1,
 ) {
-  // The original's final camera hold has an almost constant roof color balance.
-  const p = smooth(THREE.MathUtils.clamp(time / (183 / (24000 / 1001)), 0, 1));
   const strength = THREE.MathUtils.clamp(amount, 0, 1);
-  const azimuth =
-    Math.atan2(-100, 95) + THREE.MathUtils.degToRad(95 * (1 - p) * strength);
+  const envelope =
+    smooth(0.15, 1.3, time) * (1 - smooth(6.45, CAMERA_HOLD, time));
+  const roofPhase = 0.5 - 0.5 * Math.cos(time * Math.PI * 2);
+  const finalAzimuth = Math.atan2(-100, 95);
+  const activeAzimuth = THREE.MathUtils.degToRad(-12 - 46 * roofPhase);
+  const azimuth = THREE.MathUtils.lerp(
+    finalAzimuth,
+    activeAzimuth,
+    envelope * strength,
+  );
   const elevation = THREE.MathUtils.degToRad(
     THREE.MathUtils.clamp(
-      baseElevation + (29 * Math.sin(Math.PI * p) - 13 * (1 - p)) * strength,
+      baseElevation + (-12 + 33 * roofPhase) * envelope * strength,
       15,
       78,
     ),
   );
-  const radius = Math.hypot(100, 95);
   const offset = new THREE.Vector3(
-    Math.sin(azimuth) * Math.cos(elevation) * radius,
-    Math.sin(elevation) * 145,
-    Math.cos(azimuth) * Math.cos(elevation) * radius,
-  );
+    Math.sin(azimuth) * Math.cos(elevation),
+    Math.sin(elevation),
+    Math.cos(azimuth) * Math.cos(elevation),
+  ).multiplyScalar(145);
   const rotation = new THREE.Quaternion().setFromRotationMatrix(
     new THREE.Matrix4().lookAt(offset, origin, up),
   );
-  const daylightColor =
-    p < 0.46
-      ? morning.clone().lerp(noon, smooth(p / 0.46))
-      : noon.clone().lerp(afternoon, smooth((p - 0.46) / 0.54));
+  const color = new THREE.Color('#fff0df').lerp(
+    new THREE.Color('#ffdebd').lerp(new THREE.Color('#fff5eb'), roofPhase),
+    envelope * strength,
+  );
   return {
     offset,
     rotation,
-    color: afternoon.clone().lerp(daylightColor, strength),
-    sunFactor: 1 + strength * (-0.12 + 0.21 * Math.sin(Math.PI * p) + 0.12 * p),
-    ambientFactor:
-      1 + strength * (-0.08 + 0.1 * Math.sin(Math.PI * p) + 0.08 * p),
+    color,
+    sunFactor: 1 + (0.02 - 0.04 * roofPhase) * envelope * strength,
+    ambientFactor: 1 + (0.01 - 0.02 * roofPhase) * envelope * strength,
+    haze: 0.026 + 0.023 * envelope * (1 - roofPhase),
   };
 }

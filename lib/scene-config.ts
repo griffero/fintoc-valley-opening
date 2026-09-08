@@ -10,7 +10,7 @@ export type BuildingConfig = {
   visible: boolean;
 };
 export type ValleyConfig = {
-  version: 1;
+  version: 2;
   palette: {
     grass: string;
     asphalt: string;
@@ -26,13 +26,14 @@ export type ValleyConfig = {
     occlusion: number;
     elevation: number;
     timeLapse: number;
+    shutter: number;
   };
   title: [string, string];
   buildings: BuildingConfig[];
 };
 export const FILM_DURATION = 10.9;
 export const DEFAULT_CONFIG: ValleyConfig = {
-  version: 1,
+  version: 2,
   palette: {
     grass: '#456d16',
     asphalt: '#292a27',
@@ -40,14 +41,15 @@ export const DEFAULT_CONFIG: ValleyConfig = {
     title: '#ee172b',
     fintoc: '#10191e',
   },
-  camera: { azimuth: 36, elevation: 36, zoom: 1 },
+  camera: { azimuth: 46, elevation: 27, zoom: 1 },
   lighting: {
-    sun: 3.6,
-    ambient: 0.45,
-    exposure: 1.08,
+    sun: 4.1,
+    ambient: 0.28,
+    exposure: 1.12,
     occlusion: 1.6,
     elevation: 40,
     timeLapse: 1,
+    shutter: 0.8,
   },
   title: ['SILICON', 'VALLEY'],
   buildings: [
@@ -165,10 +167,12 @@ export const DEFAULT_CONFIG: ValleyConfig = {
 };
 export const freshConfig = (): ValleyConfig => structuredClone(DEFAULT_CONFIG);
 export function readConfig(value: unknown): ValleyConfig {
-  const v = value as Partial<ValleyConfig>;
+  const v = value as Omit<Partial<ValleyConfig>, 'version'> & {
+    version?: number;
+  };
   if (
     !v ||
-    v.version !== 1 ||
+    (v.version !== 1 && v.version !== 2) ||
     !v.palette ||
     !v.camera ||
     !Array.isArray(v.buildings) ||
@@ -203,6 +207,7 @@ export function readConfig(value: unknown): ValleyConfig {
       'occlusion',
       'elevation',
       'timeLapse',
+      'shutter',
     ] as const)
       c.lighting[key] =
         number(
@@ -212,10 +217,18 @@ export function readConfig(value: unknown): ValleyConfig {
             ? 80
             : key === 'exposure'
               ? 2
-              : key === 'timeLapse'
+              : key === 'timeLapse' || key === 'shutter'
                 ? 1
                 : 6,
         ) ?? c.lighting[key];
+  // Migrate the previous shot calibration without discarding the user's edits.
+  if (v.version === 1) {
+    c.camera.azimuth = (c.camera.azimuth + 10) % 360;
+    c.camera.elevation = Math.max(15, Math.min(75, c.camera.elevation - 9));
+    c.lighting.sun = Math.min(6, c.lighting.sun * (4.1 / 3.6));
+    c.lighting.ambient *= 0.28 / 0.45;
+    c.lighting.exposure = Math.min(2, c.lighting.exposure * (1.12 / 1.08));
+  }
   c.title = v.title.map((s) => String(s).slice(0, 12).toUpperCase()) as [
     string,
     string,
