@@ -1,3 +1,9 @@
+# Actualización v3 · composición y densidad · 8 de septiembre de 2026
+
+La galería de [yU+co](https://www.yuco.com/works/silicon-valley), incluidos los planos generales y modelos aislados, muestra campus grandes y conectados ocupando el primer término. La versión anterior variaba las siluetas pero seguía mostrando parcelas pequeñas rodeadas de césped. Se corrigió el punto de partida de cámara para entrar directamente en Fintoc, Android, Intel y las obras; el encuadre final y la pausa se mantienen.
+
+Tres conjuntos grandes sustituyen las piezas aisladas del primer plano. El barrio se dimensiona con las manzanas reales entre calles, aumentando las huellas útiles y conservando patios y accesos específicos. Se añadieron estacionamientos, pasarelas, cubiertas solares y alas de ventanas individuales; eBay también adopta el patrón de ventanas y paneles de las referencias. La vegetación respeta las huellas ampliadas, el viaducto y la vista del letrero de think.
+
 # Actualización v2 · variedad arquitectónica · 8 de septiembre de 2026
 
 El barrio sin marcas deja de generarse apilando la misma oficina. Doce familias usan plantas, cubiertas y estructuras propias: patios abiertos, terrazas, puentes entre torres, cuñas, naves dentadas, torres ovaladas, pilotis, aletas, estudios a dos aguas, bóvedas, voladizos y pabellones. Se alternan alturas y orientaciones, se agrupan por sectores y se separan torres y siluetas repetidas. Campus oeste y Oficinas este también reciben una estructura diferente. La sede de Fintoc y las letras principales mantienen su geometría.

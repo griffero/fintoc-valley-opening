@@ -372,16 +372,19 @@ export function createCityLife(
 
   reserve(-64, 117, 23, 23);
   const auction = group(set, 'Auction campus · solar roofs', -64, 0, 117);
-  box(auction, 0, 0, 0, 24, 8, 21, ivory);
-  for (let y = 1; y < 8; y += 2) {
+  box(auction, 0, 0, 0, 24, 8, 21, '#d1d5cf');
+  const auctionGlass = mat('#56889e', 'glass');
+  for (let y = 0.8; y < 7.5; y += 2.35) {
     for (const s of [-1, 1]) {
-      box(auction, 0, y, s * 10.52, 23, 1.1, 0.07, glass);
-      box(auction, s * 12.02, y, 0, 0.07, 1.1, 20, glass);
+      for (let x = -10.5; x < 11; x += 2.3)
+        box(auction, x, y, s * 10.52, 1.25, 1.65, 0.07, auctionGlass);
+      for (let z = -9; z < 10; z += 2.3)
+        box(auction, s * 12.02, y, z, 0.07, 1.65, 1.25, auctionGlass);
     }
   }
   box(auction, 0, 8, 0, 24.5, 0.5, 21.5, ivory);
-  solar(auction, -10, 8.55, -7, 5);
-  solar(auction, 4, 8.55, -7, 4);
+  solar(auction, -10, 8.55, -7, 14);
+  solar(auction, -10, 8.55, 1.5, 14);
   const auctionLogo = sculpture('ebay-1999-2012', 19, 0.8);
   auctionLogo.position.set(0, 8.7, 10);
   auction.add(auctionLogo);

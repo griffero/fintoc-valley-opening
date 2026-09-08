@@ -17,6 +17,7 @@ import { constructionStage, type CraneDelivery } from './construction-timeline';
 import { createFintocHQ } from './fintoc-hq';
 import { createCoffeeKiosk } from './coffee-kiosk';
 import { createNeighborhoodBuilding } from './neighborhood-buildings';
+import { createOpeningCampuses } from './opening-campus';
 import {
   createSurface,
   outdoorEnvironment,
@@ -859,71 +860,100 @@ export async function createEditableValley(
   );
   // Coherent districts with local variation; neighboring parcels avoid repeated silhouettes.
   const neighborhood: { x: number; z: number; family: number }[] = [];
+  occupied.push(
+    ...createOpeningCampuses(world, { box, mesh, mat, batch, person }),
+  );
   const familyPools = [
     [4, 8, 9, 4, 6, 0, 10, 11], // workshops and low studios
     [0, 1, 11, 8, 6, 0, 3, 9], // garden campuses
     [1, 2, 3, 5, 6, 7, 10, 11], // compact urban blocks
   ];
-  for (let z = -140; z < 285; z += 17)
-    for (let x = -225; x < 225; x += 17) {
-      const w = 7 + rand() * 5,
-        d = 6 + rand() * 6,
-        px = x + (rand() - 0.5) * 3,
-        pz = z + (rand() - 0.5) * 3;
-      if (
-        xRoads.some((r) => Math.abs(r - px) < w / 2 + 5) ||
-        zRoads.some((r) => Math.abs(r - pz) < d / 2 + 5) ||
-        (px > -46 && px < 45 && pz > -53 && pz < 66) ||
-        occupied.some(
-          (b) =>
-            Math.abs(px - b.x) < (w + b.w) / 2 + 1 &&
-            Math.abs(pz - b.z) < (d + b.d) / 2 + 1,
-        )
-      )
-        continue;
-      const g = new THREE.Group();
-      g.position.set(px, 0, pz);
-      world.add(g);
-      const h = 3 + rand() * 12;
-      const choice = rand();
-      const col = Math.round((x + 225) / 17),
-        row = Math.round((z + 140) / 17);
-      const seed = col * 73 + row * 137 + 17;
-      const district =
-        (((Math.floor(px / 64) + 2 * Math.floor(pz / 64)) % 3) + 3) % 3;
-      const pool = familyPools[district];
-      let family = pool[Math.floor(choice * pool.length)];
-      const nearby = neighborhood.filter(
-        (b) => Math.hypot(px - b.x, pz - b.z) < 28,
-      );
-      const towers = [2, 5, 7];
-      const highNeighbor = neighborhood.some(
-        (b) => towers.includes(b.family) && Math.hypot(px - b.x, pz - b.z) < 43,
-      );
-      for (let attempt = 0; attempt < 12; attempt++) {
-        if (
-          !nearby.some((b) => b.family === family) &&
-          !(highNeighbor && towers.includes(family))
-        )
-          break;
-        family = (family + 5) % 12;
-      }
-      const quarterTurn = (col + row * 3) % 4;
-      g.rotation.y = (quarterTurn * Math.PI) / 2;
-      const nearTitle = px > -95 && px < 100 && pz > -65 && pz < 85;
-      createNeighborhoodBuilding(
-        g,
-        quarterTurn % 2 ? d : w,
-        quarterTurn % 2 ? w : d,
-        Math.min(h, nearTitle ? 10.5 : 15),
-        family,
-        seed,
-        genericFacade,
-        { box, mesh, mat, batch },
-      );
-      neighborhood.push({ x: px, z: pz, family });
-      occupied.push({ x: px, z: pz, w: w + 1, d: d + 1 });
+  const parcels: {
+    x: number;
+    z: number;
+    w: number;
+    d: number;
+    col: number;
+    row: number;
+  }[] = [];
+  for (let ix = 0; ix < xRoads.length - 1; ix++) {
+    const left = xRoads[ix] + 5,
+      spanX = xRoads[ix + 1] - xRoads[ix] - 10;
+    const nx = Math.ceil((spanX + 10) / 35);
+    for (let iz = 0; iz < zRoads.length - 1; iz++) {
+      const back = zRoads[iz] + 5,
+        spanZ = zRoads[iz + 1] - zRoads[iz] - 10;
+      const nz = Math.ceil((spanZ + 10) / 35);
+      for (let cx = 0; cx < nx; cx++)
+        for (let cz = 0; cz < nz; cz++)
+          parcels.push({
+            x: left + ((cx + 0.5) * spanX) / nx,
+            z: back + ((cz + 0.5) * spanZ) / nz,
+            w: spanX / nx,
+            d: spanZ / nz,
+            col: ix * 4 + cx,
+            row: iz * 4 + cz,
+          });
     }
+  }
+  for (const lot of parcels) {
+    const w = lot.w * (0.83 + rand() * 0.14),
+      d = lot.d * (0.84 + rand() * 0.13),
+      px = lot.x,
+      pz = lot.z;
+    if (
+      xRoads.some((r) => Math.abs(r - px) < w / 2 + 5) ||
+      zRoads.some((r) => Math.abs(r - pz) < d / 2 + 5) ||
+      (px > -46 && px < 45 && pz > -53 && pz < 66) ||
+      occupied.some(
+        (b) =>
+          Math.abs(px - b.x) < (w + b.w) / 2 + 1 &&
+          Math.abs(pz - b.z) < (d + b.d) / 2 + 1,
+      )
+    )
+      continue;
+    const g = new THREE.Group();
+    g.position.set(px, 0, pz);
+    world.add(g);
+    const h = 3 + rand() * 12;
+    const choice = rand();
+    const { col, row } = lot;
+    const seed = col * 73 + row * 137 + 17;
+    const district =
+      (((Math.floor(px / 64) + 2 * Math.floor(pz / 64)) % 3) + 3) % 3;
+    const pool = familyPools[district];
+    let family = pool[Math.floor(choice * pool.length)];
+    const nearby = neighborhood.filter(
+      (b) => Math.hypot(px - b.x, pz - b.z) < 28,
+    );
+    const towers = [2, 5, 7];
+    const highNeighbor = neighborhood.some(
+      (b) => towers.includes(b.family) && Math.hypot(px - b.x, pz - b.z) < 43,
+    );
+    for (let attempt = 0; attempt < 12; attempt++) {
+      if (
+        !nearby.some((b) => b.family === family) &&
+        !(highNeighbor && towers.includes(family))
+      )
+        break;
+      family = (family + 5) % 12;
+    }
+    const quarterTurn = (col + row * 3) % 4;
+    g.rotation.y = (quarterTurn * Math.PI) / 2;
+    const nearTitle = px > -95 && px < 100 && pz > -65 && pz < 85;
+    createNeighborhoodBuilding(
+      g,
+      quarterTurn % 2 ? d : w,
+      quarterTurn % 2 ? w : d,
+      Math.min(h, nearTitle ? 10.5 : 15),
+      family,
+      seed,
+      genericFacade,
+      { box, mesh, mat, batch },
+    );
+    neighborhood.push({ x: px, z: pz, family });
+    occupied.push({ x: px, z: pz, w: w + 1, d: d + 1 });
+  }
   // Authentic extruded billboards, with framing and supporting steel.
   const signs = new THREE.Group();
   signs.name = 'Fintoc billboards';
@@ -1248,11 +1278,20 @@ export async function createEditableValley(
   }
   // Low-poly trees are individually placed instances and remain real exportable meshes.
   const treePositions: { x: number; z: number; s: number }[] = [];
+  const treeCorridorClear = (x: number, z: number) =>
+    !(Math.abs(x) < 175 && Math.abs(z - (79 - x * x * 0.0016)) < 6.5) &&
+    !(
+      x > coffeeSite.x - 3 &&
+      x < coffeeSite.x + 16 &&
+      z > coffeeSite.z - 4 &&
+      z < coffeeSite.z + 18
+    );
   for (let i = 0; i < 7000; i++) {
     const x = rand() * 450 - 225,
       z = rand() * 440 - 150,
       s = 0.7 + rand() * 0.8;
     if (
+      !treeCorridorClear(x, z) ||
       xRoads.some((r) => Math.abs(r - x) < 4.8) ||
       zRoads.some((r) => Math.abs(r - z) < 4.8) ||
       (x > -42 && x < 42 && z > -8 && z < 31) ||
@@ -1266,6 +1305,15 @@ export async function createEditableValley(
   }
   for (const x of [-43, 40, 72, -73])
     for (let z = -52; z < 100; z += 4.2) {
+      if (!treeCorridorClear(x, z)) continue;
+      if (
+        occupied.some(
+          (b) =>
+            Math.abs(x - b.x) < b.w / 2 + 0.6 &&
+            Math.abs(z - b.z) < b.d / 2 + 0.6,
+        )
+      )
+        continue;
       if (zRoads.some((r) => Math.abs(z - r) < 5)) continue;
       if (Math.abs(x - avenueX(z)) < 4.8) continue;
       if (
@@ -1653,23 +1701,21 @@ export async function createEditableValley(
   }
   function updateView(t: number) {
     if (!freeCamera) {
-      // Measured from yU+co's plate: scale .672 → 1 over frames 0–183, then a hold.
-      // This is an advancing camera with a gentle push in, not an orbit or pullback.
+      // Start inside the active campus district; retain the approved final shot.
+      // Scale-aware travel keeps the image-plane advance even until the final hold.
       const p = THREE.MathUtils.clamp(t / CAMERA_HOLD, 0, 1),
-        scale = 0.672 + 0.328 * p;
+        scale = 0.78 + 0.22 * p,
+        travel = (0.78 * (1 - p)) / scale;
       const az = THREE.MathUtils.degToRad(config.camera.azimuth),
         el = THREE.MathUtils.degToRad(config.camera.elevation);
-      const pixelScale = 1080 / 73,
-        dx = (1 - scale) * (3116 - 960),
-        dy = (1 - scale) * (-1048 - 540);
       const right = new THREE.Vector3(Math.cos(az), 0, -Math.sin(az)),
         forward = new THREE.Vector3(Math.sin(az), 0, Math.cos(az));
-      // Reframe the corrected 27°/46° view while preserving the measured push.
+      // At the default angles the first target is (-8,3,105), amidst the action.
       const target = new THREE.Vector3(0, 3, 16)
         .addScaledVector(right, 4.9)
         .addScaledVector(forward, -9.5)
-        .addScaledVector(right, -dx / (scale * pixelScale))
-        .addScaledVector(forward, -dy / (scale * pixelScale * Math.sin(el)));
+        .addScaledVector(right, -74.4785 * travel)
+        .addScaledVector(forward, 65.5699 * travel);
       camera.position
         .copy(target)
         .add(
