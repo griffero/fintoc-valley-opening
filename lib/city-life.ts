@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { TessellateModifier } from 'three/addons/modifiers/TessellateModifier.js';
+import { taskMotion } from './task-motion';
+import type { SurfaceRole } from './outdoor-materials';
 
 export const ease = (a: number, b: number, t: number) => {
   const p = THREE.MathUtils.clamp((t - a) / (b - a), 0, 1);
@@ -59,7 +61,7 @@ export function createMotion() {
 }
 
 type Kit = {
-  mat: (color: string) => THREE.MeshStandardMaterial;
+  mat: (color: string, role?: SurfaceRole) => THREE.MeshStandardMaterial;
   box: (
     p: THREE.Object3D,
     x: number,
@@ -113,7 +115,7 @@ export function createCityLife(
   const { mat, box, mesh, batch, person, sculpture } = kit;
   const reserved: { x: number; z: number; w: number; d: number }[] = [];
   const ivory = '#e7decd',
-    glass = '#688e96',
+    glass = mat('#83a5ac', 'glass'),
     steel = '#3e4b49',
     yellow = '#eabd32';
   const set = new THREE.Group();
@@ -156,7 +158,7 @@ export function createCityLife(
     shape: THREE.Shape,
     y: number,
     h: number,
-    c: string,
+    c: string | THREE.Material,
   ) {
     const geo = new THREE.ExtrudeGeometry(shape, {
       depth: h,
@@ -165,7 +167,7 @@ export function createCityLife(
     });
     geo.rotateX(-Math.PI / 2);
     geo.translate(0, y, 0);
-    return mesh(p, geo, mat(c));
+    return mesh(p, geo, typeof c === 'string' ? mat(c) : c);
   }
   function tank(
     p: THREE.Object3D,
@@ -442,7 +444,7 @@ export function createCityLife(
     0,
     Math.PI / 2,
   );
-  mesh(observatory, domeGeo, mat('#83a5ab'), 0, 7.45, 0);
+  mesh(observatory, domeGeo, mat('#83a5ab', 'glass'), 0, 7.45, 0);
   const lines = new THREE.LineSegments(
     new THREE.WireframeGeometry(domeGeo),
     new THREE.LineBasicMaterial({ color: '#d2dacf' }),
@@ -523,21 +525,49 @@ export function createCityLife(
       base,
       (t) => (base.scale.y = Math.max(0.001, 1 - ease(end, end + 0.95, t))),
     );
-    motion.track(
-      boom,
-      (t) => (boom.rotation.y = phase + Math.sin(t * 0.85 + phase) * 0.5),
-    );
+    const cycle = 1.8 + Math.abs(phase) * 0.23;
+    const task = (t: number, keys: readonly (readonly [number, number])[]) =>
+      taskMotion(Math.min(t, end), cycle, phase * 0.31, keys);
+    const hoist = (t: number) =>
+      task(t, [
+        [0, 8],
+        [0.12, 8],
+        [0.25, 3.5],
+        [0.52, 3.5],
+        [0.67, 7],
+        [0.76, 7],
+        [0.85, 3.5],
+        [0.94, 3.5],
+        [1, 8],
+      ]);
+    motion.track(boom, (t) => {
+      boom.rotation.y =
+        phase +
+        task(t, [
+          [0, -0.6],
+          [0.27, -0.6],
+          [0.45, 0.65],
+          [0.79, 0.65],
+          [0.94, -0.6],
+          [1, -0.6],
+        ]);
+    });
     motion.track(
       trolley,
-      (t) => (trolley.position.x = 8 + Math.sin(t * 1.05 + phase) * 3.5),
+      (t) =>
+        (trolley.position.x = task(t, [
+          [0, 6],
+          [0.23, 6],
+          [0.44, 11],
+          [0.78, 11],
+          [0.96, 6],
+          [1, 6],
+        ])),
     );
-    motion.track(
-      cable,
-      (t) => (cable.scale.y = 5.5 + Math.sin(t * 1.65 + phase) * 2.4),
-    );
+    motion.track(cable, (t) => (cable.scale.y = hoist(t)));
     motion.track(hook, (t) => {
-      hook.position.y = -(5.5 + Math.sin(t * 1.65 + phase) * 2.4);
-      hook.rotation.z = Math.sin(t * 2 + phase) * 0.04;
+      hook.position.y = -hoist(t);
+      hook.rotation.z = Math.sin(t * 11 + phase) * 0.022;
     });
     return base;
   }
@@ -598,21 +628,58 @@ export function createCityLife(
     batch(arm);
     batch(cab);
     batch(base);
+    const task = (t: number, keys: readonly (readonly [number, number])[]) =>
+      taskMotion(t, 1.15 + Math.abs(phase) * 0.17, phase * 0.23, keys);
     motion.track(
       cab,
-      (t) => (cab.rotation.y = phase + Math.sin(t * 1.9 + phase) * 0.8),
+      (t) =>
+        (cab.rotation.y =
+          phase +
+          task(t, [
+            [0, -0.65],
+            [0.37, -0.65],
+            [0.51, 0.85],
+            [0.75, 0.85],
+            [0.94, -0.65],
+            [1, -0.65],
+          ])),
     );
     motion.track(
       arm,
-      (t) => (arm.rotation.x = -0.22 + Math.sin(t * 2.5 + phase) * 0.35),
+      (t) =>
+        (arm.rotation.x = task(t, [
+          [0, 0.13],
+          [0.2, 0.13],
+          [0.36, -0.6],
+          [0.7, -0.6],
+          [0.93, 0.13],
+          [1, 0.13],
+        ])),
     );
     motion.track(
       stick,
-      (t) => (stick.rotation.x = 0.2 + Math.sin(t * 2.5 + phase + 0.8) * 0.5),
+      (t) =>
+        (stick.rotation.x = task(t, [
+          [0, 0.62],
+          [0.13, 0.62],
+          [0.29, -0.2],
+          [0.55, -0.2],
+          [0.68, 0.45],
+          [1, 0.62],
+        ])),
     );
     motion.track(
       bucket,
-      (t) => (bucket.rotation.x = 0.3 + Math.sin(t * 2.5 + phase + 1.4) * 0.65),
+      (t) =>
+        (bucket.rotation.x = task(t, [
+          [0, 0.6],
+          [0.15, 0.6],
+          [0.29, -0.4],
+          [0.54, -0.4],
+          [0.64, 0.9],
+          [0.77, 0.9],
+          [1, 0.6],
+        ])),
     );
     return base;
   }

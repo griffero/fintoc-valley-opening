@@ -13,10 +13,11 @@ export function sampleDaylight(
   baseElevation: number,
   amount = 1,
 ) {
-  const p = THREE.MathUtils.clamp(time / 10.9, 0, 1);
+  // The original's final camera hold has an almost constant roof color balance.
+  const p = smooth(THREE.MathUtils.clamp(time / (183 / (24000 / 1001)), 0, 1));
   const strength = THREE.MathUtils.clamp(amount, 0, 1);
   const azimuth =
-    Math.atan2(-100, 95) + THREE.MathUtils.degToRad(110 * (1 - p) * strength);
+    Math.atan2(-100, 95) + THREE.MathUtils.degToRad(95 * (1 - p) * strength);
   const elevation = THREE.MathUtils.degToRad(
     THREE.MathUtils.clamp(
       baseElevation + (29 * Math.sin(Math.PI * p) - 13 * (1 - p)) * strength,

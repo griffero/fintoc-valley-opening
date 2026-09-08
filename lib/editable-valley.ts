@@ -7,12 +7,17 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { DEFAULT_CONFIG, type ValleyConfig } from './scene-config';
 import { createCityLife, createMotion } from './city-life';
 import { sampleDaylight } from './solar-motion';
+import { createFintocHQ } from './fintoc-hq';
+import {
+  createSurface,
+  outdoorEnvironment,
+  type SurfaceRole,
+} from './outdoor-materials';
 
 const smooth = (a: number, b: number, t: number) => {
   const p = THREE.MathUtils.clamp((t - a) / (b - a), 0, 1);
@@ -20,8 +25,8 @@ const smooth = (a: number, b: number, t: number) => {
 };
 const colors = {
   roof: '#ece2d3',
-  glass: '#779294',
-  darkGlass: '#596f72',
+  glass: '#a0bbbf',
+  darkGlass: '#7c9ca5',
   curb: '#d5cbbb',
   trunk: '#746141',
 };
@@ -62,7 +67,9 @@ export async function createEditableValley(
     assetNames.map(async (name) => {
       const r = await fetch(`/assets/${name}.svg`);
       if (!r.ok) throw new Error(`No se pudo cargar ${name}`);
-      svgs.set(name, new SVGLoader().parse(await r.text()));
+      // SVG currentColor has no inherited CSS context when parsed into geometry.
+      const source = (await r.text()).replaceAll('currentColor', '#000000');
+      svgs.set(name, new SVGLoader().parse(source));
     }),
   );
   let config = structuredClone(initial),
@@ -70,7 +77,7 @@ export async function createEditableValley(
     freeCamera = false;
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#afbba0');
-  scene.fog = new THREE.Fog('#aeb6a4', 350, 640);
+  scene.fog = new THREE.Fog('#d4d6bd', 260, 760);
   const world = new THREE.Group();
   world.name = 'Silicon Valley · editable scene';
   scene.add(world);
@@ -81,7 +88,7 @@ export async function createEditableValley(
   });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 1.8));
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.13;
@@ -110,7 +117,8 @@ export async function createEditableValley(
   sunRig.name = 'Time-lapse sun · morning to afternoon';
   sun.position.set(0, 0, 0);
   sun.target.position.set(0, 0, -1);
-  sunRig.add(sun, sun.target);
+  sun.add(sun.target);
+  sunRig.add(sun);
   sun.castShadow = true;
   sun.shadow.mapSize.set(4096, 4096);
   Object.assign(sun.shadow.camera, {
@@ -120,22 +128,25 @@ export async function createEditableValley(
     bottom: -150,
     far: 350,
   });
-  sun.shadow.normalBias = 0.09;
-  sun.shadow.bias = -0.00008;
-  sun.shadow.radius = 2;
+  sun.shadow.normalBias = 0.15;
+  sun.shadow.bias = -0.00012;
+  sun.shadow.radius = 4;
   sun.name = 'Moving daylight';
   scene.add(sunRig);
   const fill = new THREE.DirectionalLight('#a8c4e8', 0.28);
   fill.position.set(90, 40, -80);
+  fill.lookAt(0, 0, 0);
+  fill.target.position.set(0, 0, -1);
+  fill.add(fill.target);
   fill.name = 'Cool sky fill';
   scene.add(fill);
-  const pmrem = new THREE.PMREMGenerator(renderer),
-    environment = new RoomEnvironment(),
-    environmentTarget = pmrem.fromScene(environment, 0.06);
+  const exportRoot = new THREE.Group();
+  exportRoot.name = 'Fintoc Valley · geometry and animated daylight';
+  exportRoot.add(world, sunRig, fill);
+  scene.add(exportRoot);
+  const environmentTarget = outdoorEnvironment(renderer);
   scene.environment = environmentTarget.texture;
-  scene.environmentIntensity = 0.13;
-  environment.dispose();
-  pmrem.dispose();
+  scene.environmentIntensity = 0.42;
   const composer = new EffectComposer(renderer);
   composer.renderTarget1.samples = 4;
   composer.renderTarget2.samples = 4;
@@ -160,21 +171,12 @@ export async function createEditableValley(
   composer.addPass(ao);
   composer.addPass(new OutputPass());
   const mats = new Map<string, THREE.MeshStandardMaterial>();
-  function mat(color: string) {
-    let m = mats.get(color);
+  function mat(color: string, role: SurfaceRole = 'masonry') {
+    const key = `${role}:${color}`;
+    let m = mats.get(key);
     if (!m) {
-      m = new THREE.MeshStandardMaterial({
-        color,
-        roughness: 0.88,
-        metalness: 0,
-        flatShading: true,
-      });
-      if (color === colors.glass || color === colors.darkGlass) {
-        m.roughness = 0.36;
-        m.metalness = 0.2;
-        m.envMapIntensity = 0.7;
-      }
-      mats.set(color, m);
+      m = createSurface(color, role);
+      mats.set(key, m);
     }
     return m;
   }
@@ -186,7 +188,11 @@ export async function createEditableValley(
     color: config.palette.asphalt,
     roughness: 1,
   });
-  const titleMat = new THREE.MeshBasicMaterial({ color: config.palette.title });
+  const titleMat = new THREE.MeshStandardMaterial({
+    color: new THREE.Color(config.palette.title).multiplyScalar(0.52),
+    roughness: 0.58,
+    metalness: 0.05,
+  });
   const fintocMat = new THREE.MeshStandardMaterial({
     color: config.palette.fintoc,
     roughness: 0.7,
@@ -405,14 +411,75 @@ export async function createEditableValley(
   const occupied: { x: number; z: number; w: number; d: number }[] = [];
   const xRoads = [-198, -168, -138, -108, -78, -48, 45, 77, 109, 141, 173, 205],
     zRoads = [-114, -84, -55, -27, 35, 68, 100, 132, 164, 196, 228, 260];
+  const avenueX = (z: number) => {
+    const u = THREE.MathUtils.clamp((z + 10) / 50, 0, 1);
+    return 45 - 4 * Math.sin(Math.PI * u) ** 2;
+  };
   box(world, 0, -0.5, 0, 620, 0.5, 660, grassMat).name = 'Ground';
   for (const x of xRoads) {
-    box(world, x, 0, 0, 7, 0.06, 590, roadMat);
-    for (const side of [-1, 1])
-      box(world, x + side * 3.9, 0, 0, 0.8, 0.18, 590, colors.curb);
+    const spans =
+      x === 45
+        ? [
+            [-295, -10],
+            [40, 295],
+          ]
+        : [[-295, 295]];
+    for (const [a, b] of spans) {
+      box(world, x, 0, (a + b) / 2, 7, 0.06, b - a, roadMat);
+      for (const side of [-1, 1])
+        box(
+          world,
+          x + side * 3.9,
+          0,
+          (a + b) / 2,
+          0.8,
+          0.18,
+          b - a,
+          colors.curb,
+        );
+    }
+    if (x === 45) {
+      const bend = new THREE.Group();
+      bend.name = 'Curving title avenue';
+      world.add(bend);
+      for (let z = -10; z < 40; z += 0.65) {
+        const end = Math.min(40, z + 0.65),
+          mid = (z + end) / 2;
+        const dx = avenueX(end) - avenueX(z),
+          dz = end - z;
+        const length = Math.hypot(dx, dz) + 0.035;
+        const road = box(bend, avenueX(mid), 0, mid, 7, 0.06, length, roadMat);
+        road.rotation.y = Math.atan2(dx, dz);
+        for (const side of [-1, 1]) {
+          const edge = box(
+            bend,
+            avenueX(mid) + side * 3.9,
+            0,
+            mid,
+            0.8,
+            0.18,
+            length,
+            colors.curb,
+          );
+          edge.rotation.y = road.rotation.y;
+        }
+      }
+      batch(bend);
+    }
     for (let z = -280; z < 285; z += 4.5) {
       if (zRoads.some((r) => Math.abs(r - z) < 5)) continue;
-      box(world, x, 0.065, z, 0.12, 0.015, 1.7, '#e2ddc9');
+      const dash = box(
+        world,
+        x === 45 ? avenueX(z) : x,
+        0.065,
+        z,
+        0.12,
+        0.015,
+        1.7,
+        '#e2ddc9',
+      );
+      if (x === 45)
+        dash.rotation.y = Math.atan2(avenueX(z + 0.1) - avenueX(z - 0.1), 0.2);
     }
   }
   for (const z of zRoads) {
@@ -440,8 +507,23 @@ export async function createEditableValley(
       }
     }
   // Central pedestrian block is continuous, like the title buildings in the reference.
-  box(world, 0, 0.06, 12, 84, 0.18, 40, '#c8c4b3');
-  box(world, 0, 0.24, 12, 81, 0.06, 37, grassMat);
+  function titleParcel(inset: number, y: number, material: THREE.Material) {
+    const shape = new THREE.Shape();
+    shape.moveTo(-42 + inset, 8 - inset);
+    for (let z = -8 + inset; z <= 32 - inset; z += 0.5)
+      shape.lineTo(avenueX(z) - 4.4 - inset, -z);
+    shape.lineTo(-42 + inset, -32 + inset);
+    shape.closePath();
+    const geometry = new THREE.ExtrudeGeometry(shape, {
+      depth: 0.12,
+      bevelEnabled: false,
+    });
+    geometry.rotateX(-Math.PI / 2);
+    mesh(world, geometry, material, 0, y, 0);
+  }
+  const parcelMat = createSurface(config.palette.grass);
+  titleParcel(0, 0.06, mat('#c8c4b3'));
+  titleParcel(0.7, 0.19, parcelMat);
   let seed = 41411;
   const rand = () => {
     seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
@@ -489,7 +571,7 @@ export async function createEditableValley(
           w - 0.35,
           1.4,
           0.045,
-          colors.glass,
+          mat(colors.glass, 'glass'),
         );
         box(
           parent,
@@ -499,7 +581,7 @@ export async function createEditableValley(
           0.045,
           1.4,
           d - 0.35,
-          colors.darkGlass,
+          mat(colors.darkGlass, 'glass'),
         );
       }
       for (let x = -w / 2 + 0.8; x < w / 2; x += 1.2)
@@ -581,14 +663,15 @@ export async function createEditableValley(
       color: b.color,
       roughness: 0.9,
     });
-    office(
-      g,
-      b.width,
-      b.depth,
-      b.height,
-      facade,
-      b.id !== 'fintoc' && b.id !== 'hp',
-    );
+    if (b.id !== 'fintoc')
+      office(
+        g,
+        b.width,
+        b.depth,
+        b.height,
+        facade,
+        b.id !== 'fintoc' && b.id !== 'hp',
+      );
     buildings.push({
       group: g,
       id: b.id,
@@ -597,18 +680,26 @@ export async function createEditableValley(
     });
     occupied.push({ x: b.x, z: b.z, w: b.width + 2, d: b.depth + 2 });
     if (b.id === 'fintoc') {
-      const logo = sculpture('fintoc-logo', 26, 0.9, fintocMat, true);
-      logo.position.set(0, b.height + 1.1, b.depth / 2 - 0.8);
+      const anchors = createFintocHQ(
+        g,
+        b,
+        facade,
+        { box, mesh, mat, batch },
+        motion,
+      );
+      const logo = sculpture(
+        'fintoc-logo',
+        anchors.logoWidth,
+        0.65,
+        fintocMat,
+        true,
+      );
+      logo.position.set(0, anchors.roof.y, anchors.roof.z);
       g.add(logo);
       logoPieces(logo, 4.9);
-      box(g, 0, b.height + 0.72, b.depth / 2 - 1, 27, 0.35, 2.2, colors.roof);
-      const small = sculpture('fintoc-logo', 11, 0.15, fintocMat);
-      small.position.set(0, b.height - 3.4, b.depth / 2 + 0.13);
-      box(g, 0, b.height - 3.9, b.depth / 2 + 0.02, 13, 3.4, 0.1, colors.roof);
+      const small = sculpture('fintoc-logo', 7.5, 0.12, '#e8eee6');
+      small.position.set(-1.5, anchors.facade.y, anchors.facade.z);
       g.add(small);
-      for (let p = 0; p < 6; p++)
-        person(g, -6 + p * 2.1, b.height + 0.8, -1 - (p % 2) * 2, p);
-      box(g, 2, b.height + 0.75, -2, 4.3, 0.17, 2.2, '#a06336');
     }
     if (b.id === 'startup') {
       const logo = sculpture('old-fintoc-logo', 17, 0.65, undefined, true);
@@ -733,10 +824,57 @@ export async function createEditableValley(
         continue;
       const g = new THREE.Group();
       g.position.set(px, 0, pz);
-      g.name = 'Neighborhood office';
       world.add(g);
       const h = 3 + rand() * 12;
-      office(g, w, d, h, genericFacade, true);
+      const kind = Math.floor(rand() * 5);
+      g.name = [
+        'Courtyard office',
+        'Stepped office',
+        'Tower and podium',
+        'Low industrial studio',
+        'Ribbon office',
+      ][kind];
+      const wing = (
+        x: number,
+        y: number,
+        z: number,
+        width: number,
+        depth: number,
+        height: number,
+      ) => {
+        const part = new THREE.Group();
+        part.position.set(x, y, z);
+        office(part, width, depth, height, genericFacade, true);
+        // Bake each wing's placement into its geometry so the whole block can batch.
+        // Reparenting removes children from part; iterate over a stable copy.
+        for (const child of part.children.slice()) {
+          child.position.add(part.position);
+          g.add(child);
+        }
+      };
+      if (kind === 0) {
+        wing(0, 0, -d * 0.29, w, d * 0.42, h * 0.7);
+        wing(-w * 0.3, 0, d * 0.21, w * 0.4, d * 0.58, h * 0.7);
+      } else if (kind === 1) {
+        wing(0, 0, 0, w, d, h * 0.58);
+        wing(-w * 0.12, h * 0.58 + 0.6, -d * 0.16, w * 0.66, d * 0.6, h * 0.42);
+      } else if (kind === 2) {
+        wing(0, 0, 0, w, d, 2.5);
+        wing(w * 0.13, 3.1, -d * 0.08, w * 0.56, d * 0.66, h);
+      } else if (kind === 3) {
+        wing(0, 0, 0, w, d, 3.3);
+        for (let i = 0; i < 3; i++)
+          box(
+            g,
+            -w * 0.28 + i * w * 0.28,
+            4.2,
+            0,
+            w * 0.17,
+            0.4,
+            d * 0.6,
+            mat('#a7b7b1', 'glass'),
+          );
+      } else office(g, w, d, h, genericFacade, true);
       batch(g);
       occupied.push({ x: px, z: pz, w: w + 1, d: d + 1 });
     }
@@ -778,6 +916,7 @@ export async function createEditableValley(
     frame: THREE.Group;
     footing: THREE.Group;
     start: number;
+    floors: { group: THREE.Group; y: number; start: number }[];
   }[] = [];
   function rebuildTitle() {
     world.remove(titleGroup);
@@ -827,18 +966,44 @@ export async function createEditableValley(
         frame.position.copy(g.position);
         footing.position.copy(g.position);
         titleGroup.add(frame, footing);
-        const height = row === 0 ? 10.8 : 9.2;
-        const geo = new THREE.ExtrudeGeometry(shapes, {
-          depth: height,
-          bevelEnabled: false,
-          curveSegments: 8,
-        });
-        geo.rotateX(-Math.PI / 2);
-        geo.scale(1, 1, depthScale);
-        mesh(g, geo, [titleMat, mat('#d9cdbb')]);
-        const foundation = geo.clone();
-        foundation.scale(1, 0.025, 1);
-        foundation.translate(0, 0.34, 0);
+        const height = row === 0 ? 12.2 : 10.4;
+        const count = row === 0 ? 6 : 5,
+          floorHeight = height / count;
+        const start = 5.15 + row * 0.48 + i * 0.18;
+        const floors: { group: THREE.Group; y: number; start: number }[] = [];
+        const extrude = (depth: number, bevel = false) => {
+          const geometry = new THREE.ExtrudeGeometry(shapes, {
+            depth,
+            curveSegments: 8,
+            bevelEnabled: bevel,
+            bevelSize: 0.055,
+            bevelThickness: 0.045,
+            bevelSegments: 1,
+          });
+          geometry.rotateX(-Math.PI / 2);
+          geometry.scale(1, 1, depthScale);
+          return geometry;
+        };
+        for (let level = 0; level < count; level++) {
+          const floor = new THREE.Group();
+          floor.name = `${char} · rigid floor ${level + 1}`;
+          floor.position.y = level * floorHeight;
+          g.add(floor);
+          mesh(floor, extrude(floorHeight), mat('#d9cdbb'));
+          floors.push({
+            group: floor,
+            y: level * floorHeight,
+            start: start + level * 0.13,
+          });
+        }
+        const cap = new THREE.Group();
+        cap.name = `${char} · beveled red roof and dark fascia`;
+        g.add(cap);
+        mesh(cap, extrude(0.2), mat('#72342e'));
+        mesh(cap, extrude(0.16, true), titleMat, 0, 0.16, 0);
+        floors.push({ group: cap, y: height, start: start + count * 0.13 });
+        const foundation = extrude(0.22);
+        foundation.translate(0, 0.3, 0);
         mesh(footing, foundation, mat('#b5b2a0'));
         for (const shape of shapes) {
           const loops = [
@@ -876,34 +1041,55 @@ export async function createEditableValley(
                     '#36433f',
                   );
               }
-              for (let y = 0.85; y < height - 0.7; y += 1.45) {
-                const strip = box(g, mx, y, mz, len, 0.72, 0.035, '#6f8580');
+              for (let level = 0; level < count; level++) {
+                const floor = floors[level].group;
+                const glass = mat(
+                  ['#829da0', '#76959a', '#9caea9'][(i + level) % 3],
+                  'glass',
+                );
+                const vertical = row === 1 && i >= 2 && i <= 4;
+                const strip = box(
+                  floor,
+                  mx,
+                  vertical ? 0.25 : 0.52,
+                  mz,
+                  len,
+                  floorHeight * (vertical ? 0.77 : 0.58),
+                  0.055,
+                  glass,
+                );
                 strip.rotation.y = angle;
-              }
-              if (len > 0.5) {
-                const n = Math.max(1, Math.round(len / 0.85));
-                for (let k = 0; k <= n; k++) {
-                  box(
-                    g,
-                    a.x + (dx * k) / n,
-                    0.5,
-                    -a.y + (dz * k) / n,
-                    0.085,
-                    height - 1,
-                    0.085,
-                    '#e2d6c3',
+                if (len > 0.5) {
+                  const n = Math.max(
+                    1,
+                    Math.round(
+                      len / (vertical ? 0.7 : i % 3 === 0 ? 0.95 : 1.35),
+                    ),
                   );
+                  for (let k = 0; k <= n; k++)
+                    box(
+                      floor,
+                      a.x + (dx * k) / n,
+                      0.18,
+                      -a.y + (dz * k) / n,
+                      vertical ? 0.24 : i % 3 === 1 ? 0.16 : 0.09,
+                      floorHeight - 0.2,
+                      0.11,
+                      '#e2d6c3',
+                    );
                 }
               }
             }
         }
+        floors.forEach((floor) => batch(floor.group));
         batch(g);
         batch(frame);
         letters.push({
           group: g,
           frame,
           footing,
-          start: 5.15 + row * 0.48 + i * 0.18,
+          start,
+          floors,
         });
         const glyph = (
           titleFont as Font & {
@@ -943,14 +1129,22 @@ export async function createEditableValley(
   for (const x of [-43, 40, 72, -73])
     for (let z = -52; z < 100; z += 4.2) {
       if (zRoads.some((r) => Math.abs(z - r) < 5)) continue;
+      if (Math.abs(x - avenueX(z)) < 4.8) continue;
       treePositions.push({ x, z, s: 1 });
     }
   const crowns = new THREE.InstancedMesh(
-    new THREE.IcosahedronGeometry(1.4, 0),
+    new THREE.IcosahedronGeometry(1.4, 1),
     mat('#ffffff'),
     treePositions.length,
   );
-  crowns.name = 'Tree crowns';
+  crowns.name = 'Rounded broadleaf tree crowns';
+  const conifers = new THREE.InstancedMesh(
+    new THREE.ConeGeometry(1.1, 4.6, 8),
+    mat('#ffffff'),
+    treePositions.length,
+  );
+  conifers.name = 'Narrow conifers';
+  conifers.castShadow = conifers.receiveShadow = true;
   crowns.castShadow = true;
   crowns.receiveShadow = true;
   const trunks = new THREE.InstancedMesh(
@@ -963,14 +1157,21 @@ export async function createEditableValley(
   const temp = new THREE.Object3D();
   treePositions.forEach(({ x, z, s }, i) => {
     temp.position.set(x, 2.6 * s, z);
-    temp.scale.set(s, 1.28 * s, s);
+    temp.scale.set(s * 1.05, (i % 3 === 0 ? 1.35 : 0.92) * s, s);
     temp.rotation.set(0, i * 1.7, 0.12);
     temp.updateMatrix();
+    const broadleaf = temp.matrix.clone();
+    if (i % 6 === 0) temp.scale.setScalar(0.001);
+    temp.updateMatrix();
     crowns.setMatrixAt(i, temp.matrix);
+    temp.matrix.copy(broadleaf);
+    if (i % 6 !== 0) temp.matrix.makeScale(0.001, 0.001, 0.001);
+    conifers.setMatrixAt(i, temp.matrix);
+    conifers.setColorAt(i, new THREE.Color(i % 2 ? '#47682c' : '#365c29'));
     crowns.setColorAt(
       i,
       new THREE.Color(
-        ['#355b17', '#466e21', '#567d24', '#668c29', '#3e631f'][i % 5],
+        ['#45692c', '#55782d', '#648337', '#728f3e', '#40642c'][i % 5],
       ),
     );
     temp.position.y = 1.3 * s;
@@ -979,7 +1180,7 @@ export async function createEditableValley(
     temp.updateMatrix();
     trunks.setMatrixAt(i, temp.matrix);
   });
-  world.add(crowns, trunks);
+  world.add(crowns, conifers, trunks);
   const freeway = new THREE.Group();
   freeway.name = 'Elevated curved freeway';
   world.add(freeway);
@@ -1089,6 +1290,22 @@ export async function createEditableValley(
     direction: i % 3 === 0 ? -1 : 1,
     bridge: i > 55,
   }));
+  // Short subframe silhouettes soften fast vehicles while leaving architecture sharp.
+  // This is a lightweight motion-blur approximation, not a whole-frame blur filter.
+  const trafficTrails = [0.09, 0.045].map((opacity, sample) => {
+    const material = new THREE.MeshStandardMaterial({
+      color: '#ffffff',
+      roughness: 0.7,
+      transparent: true,
+      opacity,
+      depthWrite: false,
+    });
+    const trails = new THREE.InstancedMesh(carSpecs[0].g, material, carCount);
+    trails.name = `Traffic shutter sample ${sample + 1}`;
+    trails.receiveShadow = true;
+    world.add(trails);
+    return trails;
+  });
   for (let i = 0; i < carCount; i++) {
     carMeshes[0].setColorAt(
       i,
@@ -1108,6 +1325,9 @@ export async function createEditableValley(
       i,
       new THREE.Color(['#a9c3c8', '#cbd3bf', '#c7d0c3'][i % 3]),
     );
+    const paint = new THREE.Color();
+    carMeshes[0].getColorAt(i, paint);
+    trafficTrails.forEach((trails) => trails.setColorAt(i, paint));
   }
   // The HP helicopter has independent main and tail rotors.
   const helicopter = new THREE.Group();
@@ -1155,6 +1375,7 @@ export async function createEditableValley(
   }
   for (const x of [-44, 40])
     for (let z = -20; z < 35; z += 11) {
+      if (x === 40 && z > -10 && z < 32) continue;
       box(world, x, 0.2, z, 0.11, 4.1, 0.11, '#66685b');
       const arm = box(world, x + 0.55, 4.2, z, 1.3, 0.12, 0.15, '#66685b');
       arm.name = 'Streetlamp';
@@ -1199,14 +1420,14 @@ export async function createEditableValley(
   function updateConfig(next: ValleyConfig) {
     const changed = config.title.join('|') !== next.title.join('|');
     config = structuredClone(next);
-    grassMat.color.set(config.palette.grass);
+    grassMat.color.set(config.palette.grass).multiplyScalar(1.38);
     ambient.intensity = config.lighting.ambient;
     sun.intensity = config.lighting.sun;
     renderer.toneMappingExposure = config.lighting.exposure;
     ao.blendIntensity = config.lighting.occlusion;
     roadMat.color.set(config.palette.asphalt);
     genericFacade.color.set(config.palette.facade);
-    titleMat.color.set(config.palette.title);
+    titleMat.color.set(config.palette.title).multiplyScalar(0.52);
     fintocMat.color.set(config.palette.fintoc);
     if (changed) rebuildTitle();
     for (const b of buildings) {
@@ -1226,14 +1447,16 @@ export async function createEditableValley(
     time = t;
     for (const b of buildings) {
       const c = config.buildings.find((c) => c.id === b.id)!;
-      const growth = b.id === 'fintoc' ? 0.24 + 0.76 * smooth(4.4, 7, t) : 1;
-      b.group.scale.y = (c.height / b.base.height) * growth;
+      b.group.scale.y = c.height / b.base.height;
+      if (b.id === 'fintoc')
+        b.group.position.y = -(c.height + 7) * (1 - smooth(4.4, 7, t));
     }
     for (const letter of letters) {
-      letter.group.scale.y = Math.max(
-        0.002,
-        smooth(letter.start, letter.start + 1.0, t),
-      );
+      for (const floor of letter.floors) {
+        floor.group.scale.setScalar(t < floor.start ? 0.001 : 1);
+        floor.group.position.y =
+          floor.y + 0.9 * (1 - smooth(floor.start, floor.start + 0.18, t));
+      }
       letter.frame.scale.y = Math.max(
         0.001,
         smooth(letter.start - 3, letter.start - 1.5, t) *
@@ -1243,6 +1466,10 @@ export async function createEditableValley(
         Math.max(0.001, smooth(letter.start - 3.8, letter.start - 2.8, t)),
       );
     }
+    parcelMat.color
+      .set(config.palette.grass)
+      .lerp(new THREE.Color('#9a8e66'), smooth(0.7, 2.1, t))
+      .lerp(roadMat.color, smooth(4.8, 7.2, t));
     motion.update(t);
     for (let i = 0; i < carCount; i++) {
       const c = carRoutes[i],
@@ -1252,12 +1479,22 @@ export async function createEditableValley(
       temp.rotation.set(
         0,
         c.bridge
-          ? Math.PI / 2 + Math.atan(p * 0.0032)
-          : (c.axis ? 0 : Math.PI / 2) + (c.direction < 0 ? Math.PI : 0),
+          ? Math.PI / 2 +
+              Math.atan(p * 0.0032) +
+              (c.direction < 0 ? Math.PI : 0)
+          : (c.axis
+              ? c.lane === 45
+                ? Math.atan2(avenueX(p + 0.1) - avenueX(p - 0.1), 0.2)
+                : 0
+              : Math.PI / 2) + (c.direction < 0 ? Math.PI : 0),
         0,
       );
       temp.position.set(
-        c.bridge ? p : c.axis ? c.lane + c.direction * 1.55 : p,
+        c.bridge
+          ? p
+          : c.axis
+            ? (c.lane === 45 ? avenueX(p) : c.lane) + c.direction * 1.55
+            : p,
         c.bridge ? 4.82 : 0.12,
         c.bridge
           ? 79 - p * p * 0.0016 + c.direction * 1.6
@@ -1268,8 +1505,29 @@ export async function createEditableValley(
       temp.scale.set(1, i % 13 === 0 ? 1.25 : 1, i % 13 === 0 ? 1.6 : 1);
       temp.updateMatrix();
       carMeshes.forEach((m) => m.setMatrixAt(i, temp.matrix));
+      trafficTrails.forEach((trails, sample) => {
+        const shutter = (sample + 1) / 90;
+        const previous = p - c.speed * c.direction * shutter;
+        temp.position.set(
+          c.bridge
+            ? previous
+            : c.axis
+              ? (c.lane === 45 ? avenueX(previous) : c.lane) +
+                c.direction * 1.55
+              : previous,
+          c.bridge ? 4.82 : 0.12,
+          c.bridge
+            ? 79 - previous * previous * 0.0016 + c.direction * 1.6
+            : c.axis
+              ? previous
+              : c.lane + c.direction * 1.55,
+        );
+        temp.updateMatrix();
+        trails.setMatrixAt(i, temp.matrix);
+      });
     }
     carMeshes.forEach((m) => (m.instanceMatrix.needsUpdate = true));
+    trafficTrails.forEach((m) => (m.instanceMatrix.needsUpdate = true));
     helicopter.position.set(
       61 + Math.sin(t * 0.27) * 4,
       22 + Math.sin(t * 0.8) * 0.4,
@@ -1364,20 +1622,41 @@ export async function createEditableValley(
       selection.visible = false;
       render(10.9);
       const tracks: THREE.KeyframeTrack[] = [];
-      const samples = Array.from({ length: 67 }, (_, i) => (i * 10.9) / 66);
-      for (const item of letters) {
-        const values = samples.flatMap((t) => [
-          1,
-          Math.max(0.002, smooth(item.start, item.start + 1, t)),
-          1,
-        ]);
-        tracks.push(
-          new THREE.VectorKeyframeTrack(
-            item.group.uuid + '.scale',
-            samples,
-            values,
+      const samples = [
+        ...new Set([
+          ...Array.from({ length: 132 }, (_, i) => (i * 10.9) / 131),
+          ...letters.flatMap((letter) =>
+            letter.floors.map((floor) => floor.start),
           ),
-        );
+        ]),
+      ]
+        .filter((t) => t <= 10.9)
+        .sort((a, b) => a - b);
+      for (const item of letters) {
+        for (const floor of item.floors) {
+          tracks.push(
+            new THREE.VectorKeyframeTrack(
+              floor.group.uuid + '.scale',
+              samples,
+              samples.flatMap((t) =>
+                Array(3).fill(t < floor.start ? 0.001 : 1),
+              ),
+              THREE.InterpolateDiscrete,
+            ),
+          );
+          tracks.push(
+            new THREE.VectorKeyframeTrack(
+              floor.group.uuid + '.position',
+              samples,
+              samples.flatMap((t) => [
+                0,
+                floor.y +
+                  0.9 * (1 - smooth(floor.start, floor.start + 0.18, t)),
+                0,
+              ]),
+            ),
+          );
+        }
         tracks.push(
           new THREE.VectorKeyframeTrack(
             item.frame.uuid + '.scale',
@@ -1407,12 +1686,12 @@ export async function createEditableValley(
         c = config.buildings.find((b) => b.id === 'fintoc')!;
       tracks.push(
         new THREE.VectorKeyframeTrack(
-          hq.group.uuid + '.scale',
+          hq.group.uuid + '.position',
           samples,
           samples.flatMap((t) => [
-            c.width / hq.base.width,
-            (c.height / hq.base.height) * (0.24 + 0.76 * smooth(4.4, 7, t)),
-            c.depth / hq.base.depth,
+            c.x,
+            -(c.height + 7) * (1 - smooth(4.4, 7, t)),
+            c.z,
           ]),
         ),
       );
@@ -1441,13 +1720,15 @@ export async function createEditableValley(
           ]),
         ),
       );
+      const exportedNodes = new Set<string>();
+      exportRoot.traverseVisible((node) => exportedNodes.add(node.uuid));
       const clip = new THREE.AnimationClip(
         'Silicon Valley opening',
         10.9,
-        tracks,
+        tracks.filter((track) => exportedNodes.has(track.name.split('.')[0])),
       );
       const exporter = new GLTFExporter();
-      const file = await exporter.parseAsync([world, sunRig, fill], {
+      const file = await exporter.parseAsync(exportRoot, {
         binary: true,
         onlyVisible: true,
         trs: true,
