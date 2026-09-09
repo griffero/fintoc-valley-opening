@@ -43,10 +43,10 @@ export function createFintocIdentity(
     height,
     0.36,
     background,
-  ).name = 'Fintoc · black sign panel';
+  ).name = 'Fintoc · white sign panel';
   const lettering = new THREE.MeshStandardMaterial({
-    name: 'Fintoc · white lettering',
-    color: '#ffffff',
+    name: 'Fintoc · black lettering',
+    color: '#080808',
     roughness: 0.62,
   });
   for (const old of [true, false]) {

@@ -10,7 +10,7 @@ export type BuildingConfig = {
   visible: boolean;
 };
 export type ValleyConfig = {
-  version: 2;
+  version: 3;
   palette: {
     grass: string;
     asphalt: string;
@@ -34,13 +34,13 @@ export type ValleyConfig = {
 };
 export const FILM_DURATION = 10.9;
 export const DEFAULT_CONFIG: ValleyConfig = {
-  version: 2,
+  version: 3,
   palette: {
     grass: '#456d16',
     asphalt: '#292a27',
     facade: '#e4d9c8',
     title: '#ee172b',
-    fintoc: '#080808',
+    fintoc: '#ffffff',
   },
   camera: { azimuth: 46, elevation: 27, zoom: 1 },
   lighting: {
@@ -174,7 +174,7 @@ export function readConfig(value: unknown): ValleyConfig {
   };
   if (
     !v ||
-    (v.version !== 1 && v.version !== 2) ||
+    (v.version !== 1 && v.version !== 2 && v.version !== 3) ||
     !v.palette ||
     !v.camera ||
     !Array.isArray(v.buildings) ||
@@ -194,9 +194,12 @@ export function readConfig(value: unknown): ValleyConfig {
     if (typeof col === 'string' && /^#[0-9a-f]{6}$/i.test(col))
       c.palette[key] = col;
   }
-  // The former default colored the letters; the same control now colors the sign panel.
-  if (c.palette.fintoc.toLowerCase() === '#10191e')
-    c.palette.fintoc = '#080808';
+  // Upgrade previous default identities once; retain custom panel colors.
+  if (
+    v.version < 3 &&
+    ['#10191e', '#080808'].includes(c.palette.fintoc.toLowerCase())
+  )
+    c.palette.fintoc = '#ffffff';
   for (const key of ['azimuth', 'elevation', 'zoom'] as const)
     c.camera[key] =
       number(

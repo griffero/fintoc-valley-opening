@@ -6,7 +6,7 @@ import { createServer } from 'vite';
 
 const root = process.cwd();
 const work = path.join(root, 'work/video-export');
-const output = path.join(root, 'outputs/fintoc-valley-v11-4k.mp4');
+const output = path.join(root, 'outputs/fintoc-valley-v12-4k.mp4');
 const probe = process.argv.includes('--probe');
 const width = probe ? 1920 : 3840, height = probe ? 1080 : 2160;
 const fps = 24, total = 262;
@@ -126,10 +126,10 @@ try {
         const oneFintocLocation = names.filter(n=>n==='Fintoc · single identity').length===1 &&
           json.nodes[identity]?.children?.includes(oldIdentity) && json.nodes[identity]?.children?.includes(newIdentity) &&
           !names.some(n=>/Fintoc billboards|Fintoc · primera sede|Fintoc · new identity assembled larger|old-fintoc-symbol/.test(n));
-        const whiteFintocLetters = json.materials.filter(m=>m.name==='Fintoc · white lettering').some(m=>(m.pbrMetallicRoughness.baseColorFactor || [1,1,1,1]).slice(0,3).every(c=>c===1));
-        const panel = json.nodes[names.indexOf('Fintoc · black sign panel')];
+        const blackFintocLetters = json.materials.filter(m=>m.name==='Fintoc · black lettering').some(m=>(m.pbrMetallicRoughness.baseColorFactor || [1,1,1,1]).slice(0,3).every(c=>c<0.01));
+        const panel = json.nodes[names.indexOf('Fintoc · white sign panel')];
         const panelMaterial = json.materials[json.meshes[panel.mesh].primitives[0].material];
-        const blackFintocPanel = panelMaterial.pbrMetallicRoughness.baseColorFactor.slice(0,3).every(c=>c<0.01);
+        const whiteFintocPanel = (panelMaterial.pbrMetallicRoughness.baseColorFactor || [1,1,1,1]).slice(0,3).every(c=>c===1);
         const binaryStart = 28 + view.getUint32(12,true);
         const values = index => {
           const a = json.accessors[index], b = json.bufferViews[a.bufferView];
@@ -161,7 +161,7 @@ try {
         const fintocTransition = identityParts.length>0 && identityParts.every(n=>animated.has(n.i)) && oldShown && oldGone && newWaiting && newComplete;
         engine.render(4.7,3);
         window.__afterExport = engine.canvas.toDataURL();
-        return {integratedBrands: integratedBrands.map(n=>({name:n.name,mount:n.mount,animated:animated.has(n.i)})),soraAbsent: !names.some(name=>/sora|Studio clapperboard|Movie camera on tripod/i.test(name)),oneFintocLocation,whiteFintocLetters,blackFintocPanel,fintocTransition,seekStable,titleRestored,hazeChangesImage,hazeRestored,exportRestored:expected===engine.canvas.toDataURL(),
+        return {integratedBrands: integratedBrands.map(n=>({name:n.name,mount:n.mount,animated:animated.has(n.i)})),soraAbsent: !names.some(name=>/sora|Studio clapperboard|Movie camera on tripod/i.test(name)),oneFintocLocation,blackFintocLetters,whiteFintocPanel,fintocTransition,seekStable,titleRestored,hazeChangesImage,hazeRestored,exportRestored:expected===engine.canvas.toDataURL(),
           facetedFoliage,foliagePrimitives:foliagePrimitives.length,glbBytes:bytes.length,channels:json.animations[0].channels.length,
           images:json.images?.length || 0,
           storyActors:storyActors.map(n=>({name:n.name,animated:animated.has(n.i)})),
@@ -174,7 +174,7 @@ try {
       console.log('Verification:',JSON.stringify(check));
       if(!check.facetedFoliage) throw new Error('GLB foliage lost its face normals');
       for(const phase of ['before','after']) await writeFile(path.join(work,phase+'-export.png'),Buffer.from(await evaluate(`window.__${phase}Export.split(',')[1]`),'base64'));
-      if(check.integratedBrands.length !== 5 || check.integratedBrands.some(n=>!n.animated) || !check.soraAbsent || !check.oneFintocLocation || !check.whiteFintocLetters || !check.blackFintocPanel || !check.fintocTransition || !check.seekStable || !check.titleRestored || !check.hazeChangesImage || !check.hazeRestored || !check.exportRestored || !check.fusionAbsent || check.storyActors.length !== 29 || check.storyActors.some(n=>!n.animated) || check.techActors.length !== 24 || check.techActors.some(n=>!n.animated) || check.epochActors.length !== 3 || check.epochActors.some(n=>!n.animated) || check.texturedRoles.length !== 10 || check.craneChildren.some(n=>!n.animated && n.name!=='Roof finishing piece')) throw new Error('Animation verification failed');
+      if(check.integratedBrands.length !== 5 || check.integratedBrands.some(n=>!n.animated) || !check.soraAbsent || !check.oneFintocLocation || !check.blackFintocLetters || !check.whiteFintocPanel || !check.fintocTransition || !check.seekStable || !check.titleRestored || !check.hazeChangesImage || !check.hazeRestored || !check.exportRestored || !check.fusionAbsent || check.storyActors.length !== 29 || check.storyActors.some(n=>!n.animated) || check.techActors.length !== 24 || check.techActors.some(n=>!n.animated) || check.epochActors.length !== 3 || check.epochActors.some(n=>!n.animated) || check.texturedRoles.length !== 10 || check.craneChildren.some(n=>!n.animated && n.name!=='Roof finishing piece')) throw new Error('Animation verification failed');
       await writeFile(path.join(work,'verification.json'),JSON.stringify(check,null,2));
       const pieces = [];
       for(let start=0;start<check.glbBytes;start+=49152) {
