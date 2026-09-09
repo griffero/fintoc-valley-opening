@@ -16,7 +16,6 @@ import { ShutterPass } from './shutter-pass';
 import { constructionStage, type CraneDelivery } from './construction-timeline';
 import { createFintocHQ } from './fintoc-hq';
 import { createFintocIdentity } from './fintoc-identity';
-import { createCoffeeKiosk } from './coffee-kiosk';
 import { createNeighborhoodBuilding } from './neighborhood-buildings';
 import { createOpeningCampuses } from './opening-campus';
 import {
@@ -77,7 +76,6 @@ export async function createEditableValley(
     'youtube-2013',
     'yahoo-lettering',
     'hp',
-    'think-logo',
     'spacex-wordmark',
     'openai-blossom',
     'openai-wordmark',
@@ -848,13 +846,9 @@ export async function createEditableValley(
     }
     batch(g);
   }
-  const coffeeSite = createCoffeeKiosk(
-    world,
-    sculpture('think-logo', 2.86, 0.028, '#111411'),
-    { mat, box, mesh, batch, person },
-    motion,
-  );
-  occupied.push(coffeeSite);
+  // Keep the foreground beside Fintoc open after removing the coffee stand.
+  const headquartersForecourt = { x: 29, z: -20, w: 9, d: 7 };
+  occupied.push(headquartersForecourt);
   occupied.push(
     ...createCityLife(
       world,
@@ -1288,10 +1282,10 @@ export async function createEditableValley(
   const treeCorridorClear = (x: number, z: number) =>
     !(Math.abs(x) < 175 && Math.abs(z - (79 - x * x * 0.0016)) < 6.5) &&
     !(
-      x > coffeeSite.x - 3 &&
-      x < coffeeSite.x + 16 &&
-      z > coffeeSite.z - 4 &&
-      z < coffeeSite.z + 18
+      x > headquartersForecourt.x - 3 &&
+      x < headquartersForecourt.x + 16 &&
+      z > headquartersForecourt.z - 4 &&
+      z < headquartersForecourt.z + 18
     );
   for (let i = 0; i < 7000; i++) {
     const x = rand() * 450 - 225,
@@ -1324,8 +1318,8 @@ export async function createEditableValley(
       if (zRoads.some((r) => Math.abs(z - r) < 5)) continue;
       if (Math.abs(x - avenueX(z)) < 4.8) continue;
       if (
-        Math.abs(x - coffeeSite.x) < coffeeSite.w / 2 + 2 &&
-        Math.abs(z - coffeeSite.z) < coffeeSite.d / 2 + 2
+        Math.abs(x - headquartersForecourt.x) < headquartersForecourt.w / 2 + 2 &&
+        Math.abs(z - headquartersForecourt.z) < headquartersForecourt.d / 2 + 2
       )
         continue;
       treePositions.push({ x, z, s: 1 });
