@@ -134,8 +134,8 @@ export async function createEditableValley(
   controls.maxPolarAngle = Math.PI * 0.47;
   const ambient = new THREE.HemisphereLight(
     '#cbd8e8',
-    '#81867e',
-    config.lighting.ambient * 1.25,
+    '#858d89',
+    config.lighting.ambient * 1.35,
   );
   scene.add(ambient);
   const sun = new THREE.DirectionalLight('#ffe3ba', config.lighting.sun);
@@ -156,10 +156,10 @@ export async function createEditableValley(
   });
   sun.shadow.normalBias = 0.11;
   sun.shadow.bias = -0.00012;
-  sun.shadow.radius = 3.2;
+  sun.shadow.radius = 3.8;
   sun.name = 'Moving daylight';
   scene.add(sunRig);
-  const fill = new THREE.DirectionalLight('#a8bde3', 0.26);
+  const fill = new THREE.DirectionalLight('#b5c9e2', 0.34);
   fill.position.set(90, 40, -80);
   fill.lookAt(0, 0, 0);
   fill.target.position.set(0, 0, -1);
@@ -196,29 +196,34 @@ export async function createEditableValley(
     normalPhi: 4,
     samples: 12,
   });
-  ao.blendIntensity = config.lighting.occlusion * 0.8;
+  ao.blendIntensity = config.lighting.occlusion * 0.72;
   composer.addPass(ao);
   const atmosphere = new ShaderPass({
+    name: 'Cinematic distance haze',
     uniforms: {
       tDiffuse: { value: null },
-      tDepth: { value: ao.depthTexture },
-      veil: { value: 0.026 },
+      tDepth: { value: null },
+      hazeDensity: { value: config.lighting.haze * 0.34 },
       cameraNear: { value: camera.near },
       cameraFar: { value: camera.far },
       airColor: { value: new THREE.Color('#dbe4e8') },
     },
     vertexShader: `varying vec2 uv0; void main(){uv0=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
     fragmentShader: `uniform sampler2D tDiffuse; uniform sampler2D tDepth;
-      uniform float veil, cameraNear, cameraFar; uniform vec3 airColor; varying vec2 uv0;
+      uniform float hazeDensity, cameraNear, cameraFar; uniform vec3 airColor; varying vec2 uv0;
       void main(){
         vec4 c=texture2D(tDiffuse,uv0);
         float depth=texture2D(tDepth,uv0).r;
         float distanceToCamera=mix(cameraNear,cameraFar,depth);
-        float air=smoothstep(180.,520.,distanceToCamera)*(veil*.7+.012);
+        // Aerial perspective in linear light: crisp near objects, a faint cool veil in the distance.
+        float air=smoothstep(200.,365.,distanceToCamera)*hazeDensity;
         c.rgb=mix(c.rgb,airColor,air*step(depth,.99999));
         gl_FragColor=c;
       }`,
   });
+  // ShaderPass clones uniforms. Bind the live G-buffer after construction so
+  // the atmosphere samples rendered depth, not an unattached DepthTexture copy.
+  atmosphere.uniforms.tDepth.value = ao.depthTexture;
   composer.addPass(atmosphere);
   const output = new OutputPass();
   composer.addPass(output);
@@ -1674,10 +1679,10 @@ export async function createEditableValley(
     const changed = config.title.join('|') !== next.title.join('|');
     config = structuredClone(next);
     grassMat.color.set(config.palette.grass).multiplyScalar(1.45);
-    ambient.intensity = config.lighting.ambient * 1.25;
+    ambient.intensity = config.lighting.ambient * 1.35;
     sun.intensity = config.lighting.sun;
     renderer.toneMappingExposure = config.lighting.exposure;
-    ao.blendIntensity = config.lighting.occlusion * 0.8;
+    ao.blendIntensity = config.lighting.occlusion * 0.72;
     roadMat.color.set(config.palette.asphalt);
     genericFacade.color.set(config.palette.facade);
     titleMat.color.set(config.palette.title).multiplyScalar(0.52);
@@ -1808,9 +1813,10 @@ export async function createEditableValley(
     sunRig.position.copy(controls.target).add(daylight.offset);
     sunRig.quaternion.copy(daylight.rotation);
     sun.color.copy(daylight.color);
-    sun.intensity = config.lighting.sun * daylight.sunFactor;
-    ambient.intensity = config.lighting.ambient * 1.25 * daylight.ambientFactor;
-    atmosphere.uniforms.veil.value = daylight.haze;
+    sun.intensity = config.lighting.sun * 0.95 * daylight.sunFactor;
+    ambient.intensity = config.lighting.ambient * 1.35 * daylight.ambientFactor;
+    atmosphere.uniforms.hazeDensity.value =
+      config.lighting.haze * 0.34 * daylight.hazeFactor;
     sunRig.updateMatrixWorld(true);
   }
   function render(t: number, samples = 3) {

@@ -683,8 +683,8 @@ export default function Home() {
                     <h2>Iluminación</h2>
                     <p>
                       La luz alterna entre techos y fachadas durante el
-                      timelapse. Ajusta su intensidad, las sombras y el
-                      movimiento.
+                      timelapse. Ajusta su intensidad, las sombras, la neblina y
+                      el movimiento.
                     </p>
                   </div>
                   <Range
@@ -760,6 +760,19 @@ export default function Home() {
                       setConfig((c) => ({
                         ...c,
                         lighting: { ...c.lighting, occlusion },
+                      }))
+                    }
+                  />
+                  <Range
+                    label="Neblina"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={config.lighting.haze}
+                    onChange={(haze) =>
+                      setConfig((c) => ({
+                        ...c,
+                        lighting: { ...c.lighting, haze },
                       }))
                     }
                   />

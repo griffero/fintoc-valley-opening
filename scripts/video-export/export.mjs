@@ -6,7 +6,7 @@ import { createServer } from 'vite';
 
 const root = process.cwd();
 const work = path.join(root, 'work/video-export');
-const output = path.join(root, 'outputs/fintoc-valley-v7-4k.mp4');
+const output = path.join(root, 'outputs/fintoc-valley-v8-4k.mp4');
 const probe = process.argv.includes('--probe');
 const width = probe ? 1920 : 3840, height = probe ? 1080 : 2160;
 const fps = 24, total = 262;
@@ -102,6 +102,11 @@ try {
         engine.updateConfig(changed); engine.render(6.2,3);
         engine.updateConfig(original); engine.render(4.7,3);
         const titleRestored = expected === engine.canvas.toDataURL();
+        const clearAir = structuredClone(original); clearAir.lighting.haze = 0;
+        engine.updateConfig(clearAir); engine.render(4.7,3);
+        const hazeChangesImage = expected !== engine.canvas.toDataURL();
+        engine.updateConfig(original); engine.render(4.7,3);
+        const hazeRestored = expected === engine.canvas.toDataURL();
         const blob = await engine.exportGLB();
         const bytes = new Uint8Array(await blob.arrayBuffer());
         window.__glbBytes = bytes;
@@ -115,7 +120,7 @@ try {
         const craneChildren = names.map((name,i) => ({name,i})).filter(n => /Traveling trolley|Variable hoist cable|Facade panel carried|Roof finishing piece/.test(n.name));
         engine.render(4.7,3);
         window.__afterExport = engine.canvas.toDataURL();
-        return {seekStable,titleRestored,exportRestored:expected===engine.canvas.toDataURL(),
+        return {seekStable,titleRestored,hazeChangesImage,hazeRestored,exportRestored:expected===engine.canvas.toDataURL(),
           glbBytes:bytes.length,channels:json.animations[0].channels.length,
           images:json.images?.length || 0,
           storyActors:storyActors.map(n=>({name:n.name,animated:animated.has(n.i)})),
@@ -127,7 +132,7 @@ try {
       })()`);
       console.log('Verification:',JSON.stringify(check));
       for(const phase of ['before','after']) await writeFile(path.join(work,phase+'-export.png'),Buffer.from(await evaluate(`window.__${phase}Export.split(',')[1]`),'base64'));
-      if(!check.seekStable || !check.titleRestored || !check.exportRestored || !check.fusionAbsent || check.storyActors.length !== 31 || check.storyActors.some(n=>!n.animated) || check.techActors.length !== 24 || check.techActors.some(n=>!n.animated) || check.epochActors.length !== 4 || check.epochActors.some(n=>!n.animated) || check.texturedRoles.length !== 10 || check.craneChildren.some(n=>!n.animated && n.name!=='Roof finishing piece')) throw new Error('Animation verification failed');
+      if(!check.seekStable || !check.titleRestored || !check.hazeChangesImage || !check.hazeRestored || !check.exportRestored || !check.fusionAbsent || check.storyActors.length !== 31 || check.storyActors.some(n=>!n.animated) || check.techActors.length !== 24 || check.techActors.some(n=>!n.animated) || check.epochActors.length !== 4 || check.epochActors.some(n=>!n.animated) || check.texturedRoles.length !== 10 || check.craneChildren.some(n=>!n.animated && n.name!=='Roof finishing piece')) throw new Error('Animation verification failed');
       await writeFile(path.join(work,'verification.json'),JSON.stringify(check,null,2));
       const pieces = [];
       for(let start=0;start<check.glbBytes;start+=49152) {

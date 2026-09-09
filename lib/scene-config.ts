@@ -27,6 +27,7 @@ export type ValleyConfig = {
     elevation: number;
     timeLapse: number;
     shutter: number;
+    haze: number;
   };
   title: [string, string];
   buildings: BuildingConfig[];
@@ -50,6 +51,7 @@ export const DEFAULT_CONFIG: ValleyConfig = {
     elevation: 40,
     timeLapse: 1,
     shutter: 0.8,
+    haze: 0.18,
   },
   title: ['SILICON', 'VALLEY'],
   buildings: [
@@ -208,6 +210,7 @@ export function readConfig(value: unknown): ValleyConfig {
       'elevation',
       'timeLapse',
       'shutter',
+      'haze',
     ] as const)
       c.lighting[key] =
         number(
@@ -217,7 +220,7 @@ export function readConfig(value: unknown): ValleyConfig {
             ? 80
             : key === 'exposure'
               ? 2
-              : key === 'timeLapse' || key === 'shutter'
+              : key === 'timeLapse' || key === 'shutter' || key === 'haze'
                 ? 1
                 : 6,
         ) ?? c.lighting[key];

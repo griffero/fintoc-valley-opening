@@ -8,7 +8,7 @@
 import { createEditableValley } from '/lib/editable-valley.ts';
 import { freshConfig } from '/lib/scene-config.ts';
 try {
-  // Settings used for the v7 release; adjust here for a different export.
+  // Settings used for the v8 release; adjust here for a different export.
   const config = freshConfig();
   config.buildings.find(b => b.id === 'startup').z = 120;
   window.__engine = await createEditableValley(document.getElementById('scene'), config);
