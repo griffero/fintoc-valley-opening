@@ -1,0 +1,26 @@
+[
+  {
+    "file": "nvidia-eye.svg",
+    "source": "https://www.nvidia.com/content/nvidiaGDC/gb/en_GB/about-nvidia/legal-info/logo-brand-usage/_jcr_content/root/responsivegrid/nv_container_392921705/nv_container/nv_image.coreimg.svg/1776076276742/nvidia-logo-vert.svg",
+    "official_page": "https://www.nvidia.com/en-gb/about-nvidia/legal-info/logo-brand-usage/",
+    "sha256": "733fe8bb48ffce1d9557dbd6ecc7cf1bc8237b70e82b6a1c39a8de8136323df2",
+    "original_sha256": "5347e5188c74204767d2d4daa17b59b5a18ccd7ad0a7281e7961a83c20c96808",
+    "notes": "Original path coordinates preserved; SVG viewBox tightened. Official path separated; wordmark set to white for dark facade."
+  },
+  {
+    "file": "nvidia-wordmark.svg",
+    "source": "https://www.nvidia.com/content/nvidiaGDC/gb/en_GB/about-nvidia/legal-info/logo-brand-usage/_jcr_content/root/responsivegrid/nv_container_392921705/nv_container/nv_image.coreimg.svg/1776076276742/nvidia-logo-vert.svg",
+    "official_page": "https://www.nvidia.com/en-gb/about-nvidia/legal-info/logo-brand-usage/",
+    "sha256": "fe7fcec88088f44ce53fd63553c151eaffda10a4f088caae0b604540a70da5f3",
+    "original_sha256": "5347e5188c74204767d2d4daa17b59b5a18ccd7ad0a7281e7961a83c20c96808",
+    "notes": "Original path coordinates preserved; SVG viewBox tightened. Official path separated; wordmark set to white for dark facade."
+  },
+  {
+    "file": "waymo-w.svg",
+    "source": "https://waymo.com/media-resources/",
+    "official_page": "https://waymo.com/media-resources/",
+    "sha256": "e2d0eb32547ca0b7e986493a10c0d344dc488e58ba172adfee6a6ad0835af5d5",
+    "original_sha256": "6267428dd4cff4d31e8f624b1b8589dce45e8716f1a673405ad3af2a6a8effe4",
+    "notes": "Original path coordinates preserved; SVG viewBox tightened. Source: Waymo."
+  }
+]

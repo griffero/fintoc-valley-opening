@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { ease, type createMotion } from './city-life';
 import type { SurfaceRole } from './outdoor-materials';
 
-type Kit = {
+export type Kit = {
   box: (
     p: THREE.Object3D,
     x: number,

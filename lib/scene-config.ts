@@ -77,13 +77,13 @@ export const DEFAULT_CONFIG: ValleyConfig = {
     },
     {
       id: 'yahoo',
-      name: 'Yahoo',
+      name: 'NVIDIA · megacampus',
       x: -12,
       z: -40,
-      width: 23,
+      width: 32,
       depth: 17,
       height: 20,
-      color: '#ded8ca',
+      color: '#25332f',
       visible: true,
     },
     {
@@ -154,7 +154,7 @@ export const DEFAULT_CONFIG: ValleyConfig = {
     },
     {
       id: 'office',
-      name: 'Oficinas este',
+      name: 'Yahoo',
       x: 65,
       z: -16,
       width: 20,
@@ -246,6 +246,11 @@ export function readConfig(value: unknown): ValleyConfig {
     if (typeof input.color === 'string' && /^#[0-9a-f]{6}$/i.test(input.color))
       b.color = input.color;
     if (typeof input.visible === 'boolean') b.visible = input.visible;
+    // Migrate only the former Yahoo defaults; preserve deliberate dimensions/colors.
+    if (b.id === 'yahoo' && input.name === 'Yahoo') {
+      if (input.width === 23) b.width = 32;
+      if (input.color === '#ded8ca') b.color = '#25332f';
+    }
   }
   return c;
 }
