@@ -7,7 +7,5 @@ export const STORY_TIMING = {
   anthropic: 4.8,
   nvidia: 5.35,
   waymo: 6.0,
-  soraStudio: 6.4,
   openClaw: 7.3,
-  soraClosureShift: 4.45,
 };

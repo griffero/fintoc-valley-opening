@@ -1,6 +1,6 @@
-# Waymo, NVIDIA y cronología visual · v7
+# Waymo, NVIDIA y cronología visual · v10
 
-La escena recupera la arquitectura y el nivel de detalle de las versiones anteriores. Se elimina la planta de fusión completa. NVIDIA usa el mismo edificio de oficinas claro, ventanas por piso y techo plano que sus vecinos: 23 unidades de ancho y 16 de alto, con un letrero normal en el techo. Yahoo conserva su nueva ubicación en el edificio este. Fintoc recupera el logo sin la placa añadida para el anterior fondo oscuro.
+La escena recupera la arquitectura y el nivel de detalle de las versiones anteriores. Se elimina la planta de fusión completa. NVIDIA usa el mismo edificio de oficinas claro, ventanas por piso y techo plano que sus vecinos: 23 unidades de ancho y 16 de alto, con un letrero normal en el techo. Yahoo conserva su nueva ubicación en el edificio este. Fintoc tiene una sola placa negra sobre la sede: las letras blancas cambian de la identidad antigua a la actual.
 
 ## Orden del relato
 
@@ -8,19 +8,17 @@ Los tiempos están centralizados en `lib/story-timing.ts`:
 
 | Tiempo | Acción |
 | --- | --- |
-| 0–1,15 s | Ciudad tecnológica previa y nacimiento de la primera identidad Fintoc |
+| 0–1,15 s | Ciudad tecnológica previa |
 | 1,15–3,4 s | Aparecen los NFT; las piezas caen como dominós, WEB3 se desploma y se desparraman las fichas |
 | 2,9–4,03 s | Twitter se pliega y aparece SpaceX; el cohete despega desde 4,47 s |
 | 4,5–5,2 s | Aparecen OpenAI y Anthropic; luego sus equipos de cómputo |
+| 5,15–7,60 s | Logo antiguo de Fintoc, desarme y ensamblado de la identidad actual en la misma sede |
 | 5,35–5,75 s | Se instala el letrero de NVIDIA sobre un edificio convencional |
 | 6–6,91 s | Entran progresivamente ocho Waymos al tráfico |
-| 6,4 s | Aparece el estudio Sora abierto |
 | 7,3–7,54 s | Aparecen las tres langostas de OpenClaw |
-| 8–8,85 s | Sora baja la cortina y pliega el cartel |
 
-Es una lectura por épocas y acontecimientos, no una cronología de fundación de empresas. Twitter → SpaceX sigue siendo una transición creativa. La progresión Fintoc y la construcción del título mantienen el hilo principal y transcurren en paralelo. El cierre de Sora ocurre después de la llegada de OpenClaw: [OpenClaw anunció ese nombre el 29 de enero de 2026](https://openclaw.ai/blog/introducing-openclaw), y la [web/app de Sora cerraron el 26 de abril de 2026](https://help.openai.com/en/articles/20001152-what-to-know-about-the-sora-discontinuation).
+Es una lectura por épocas y acontecimientos, no una cronología de fundación de empresas. Twitter → SpaceX sigue siendo una transición creativa. La progresión Fintoc y la construcción del título mantienen el hilo principal y transcurren en paralelo.
 
-Para que el último acontecimiento siga dentro del encuadre, Sora pasa a una parcela pequeña junto a SpaceX, en x=27,5, z=50. La cámara, la luz y la música mantienen sus ajustes anteriores.
 
 ## Assets y edición
 
@@ -32,4 +30,4 @@ Los identificadores internos `yahoo` y `office` se mantienen para cargar proyect
 
 ## Verificación
 
-El renderizador comprueba saltos temporales deterministas, restauración tras editar títulos y exportar, diez familias de texturas PBR, animación de los actores nuevos y ausencia de geometría de fusión/megacampus. También se verifica la migración de configuraciones sin perder ediciones personales.
+El renderizador comprueba saltos temporales deterministas, restauración tras editar títulos y exportar, diez familias de texturas PBR, animación de los actores nuevos y ausencia de geometría de fusión/megacampus y del estudio retirado. También se verifica la migración de configuraciones sin perder ediciones personales.

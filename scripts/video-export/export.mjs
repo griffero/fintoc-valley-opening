@@ -6,7 +6,7 @@ import { createServer } from 'vite';
 
 const root = process.cwd();
 const work = path.join(root, 'work/video-export');
-const output = path.join(root, 'outputs/fintoc-valley-v9-4k.mp4');
+const output = path.join(root, 'outputs/fintoc-valley-v10-4k.mp4');
 const probe = process.argv.includes('--probe');
 const width = probe ? 1920 : 3840, height = probe ? 1080 : 2160;
 const fps = 24, total = 262;
@@ -114,9 +114,9 @@ try {
         const json = JSON.parse(new TextDecoder().decode(bytes.slice(20,20+view.getUint32(12,true))));
         const names = json.nodes.map(n => n.name || '');
         const animated = new Set(json.animations.flatMap(a => a.channels.map(c => c.target.node)));
-        const storyActors = names.map((name,i) => ({name,i})).filter(n => /Twitter roundel|SpaceX wordmark|SpaceX rocket|Rocket exhaust|Launch smoke puff|Sora rooftop sign|Sora · closing roller shutter|OpenClaw lobster/.test(n.name));
+        const storyActors = names.map((name,i) => ({name,i})).filter(n => /Twitter roundel|SpaceX wordmark|SpaceX rocket|Rocket exhaust|Launch smoke puff|OpenClaw lobster/.test(n.name));
         const techActors = names.map((name,i) => ({name,i})).filter(n => /NVIDIA · office rooftop identity|NFT . Web3 · speculative domino crash|NFT · falling collectible|Web3 · collapsing marquee|Web3 · spilled token|NFT · clearance sign|Waymo · robotaxi/.test(n.name));
-        const epochActors = names.map((name,i) => ({name,i})).filter(n => /openai · rooftop identity|anthropic · rooftop identity|Sora · studio shutdown|OpenClaw · small terrace plaque/.test(n.name));
+        const epochActors = names.map((name,i) => ({name,i})).filter(n => /openai · rooftop identity|anthropic · rooftop identity|OpenClaw · small terrace plaque/.test(n.name));
         const craneChildren = names.map((name,i) => ({name,i})).filter(n => /Traveling trolley|Variable hoist cable|Facade panel carried|Roof finishing piece/.test(n.name));
         const identity = names.indexOf('Fintoc · single identity');
         const oldIdentity = names.indexOf('Fintoc · 2021 identity');
@@ -149,7 +149,7 @@ try {
         const fintocTransition = identityParts.length>0 && identityParts.every(n=>animated.has(n.i)) && oldShown && oldGone && newWaiting && newComplete;
         engine.render(4.7,3);
         window.__afterExport = engine.canvas.toDataURL();
-        return {oneFintocLocation,whiteFintocLetters,blackFintocPanel,fintocTransition,seekStable,titleRestored,hazeChangesImage,hazeRestored,exportRestored:expected===engine.canvas.toDataURL(),
+        return {soraAbsent: !names.some(name=>/sora|Studio clapperboard|Movie camera on tripod/i.test(name)),oneFintocLocation,whiteFintocLetters,blackFintocPanel,fintocTransition,seekStable,titleRestored,hazeChangesImage,hazeRestored,exportRestored:expected===engine.canvas.toDataURL(),
           glbBytes:bytes.length,channels:json.animations[0].channels.length,
           images:json.images?.length || 0,
           storyActors:storyActors.map(n=>({name:n.name,animated:animated.has(n.i)})),
@@ -161,7 +161,7 @@ try {
       })()`);
       console.log('Verification:',JSON.stringify(check));
       for(const phase of ['before','after']) await writeFile(path.join(work,phase+'-export.png'),Buffer.from(await evaluate(`window.__${phase}Export.split(',')[1]`),'base64'));
-      if(!check.oneFintocLocation || !check.whiteFintocLetters || !check.blackFintocPanel || !check.fintocTransition || !check.seekStable || !check.titleRestored || !check.hazeChangesImage || !check.hazeRestored || !check.exportRestored || !check.fusionAbsent || check.storyActors.length !== 31 || check.storyActors.some(n=>!n.animated) || check.techActors.length !== 24 || check.techActors.some(n=>!n.animated) || check.epochActors.length !== 4 || check.epochActors.some(n=>!n.animated) || check.texturedRoles.length !== 10 || check.craneChildren.some(n=>!n.animated && n.name!=='Roof finishing piece')) throw new Error('Animation verification failed');
+      if(!check.soraAbsent || !check.oneFintocLocation || !check.whiteFintocLetters || !check.blackFintocPanel || !check.fintocTransition || !check.seekStable || !check.titleRestored || !check.hazeChangesImage || !check.hazeRestored || !check.exportRestored || !check.fusionAbsent || check.storyActors.length !== 29 || check.storyActors.some(n=>!n.animated) || check.techActors.length !== 24 || check.techActors.some(n=>!n.animated) || check.epochActors.length !== 3 || check.epochActors.some(n=>!n.animated) || check.texturedRoles.length !== 10 || check.craneChildren.some(n=>!n.animated && n.name!=='Roof finishing piece')) throw new Error('Animation verification failed');
       await writeFile(path.join(work,'verification.json'),JSON.stringify(check,null,2));
       const pieces = [];
       for(let start=0;start<check.glbBytes;start+=49152) {

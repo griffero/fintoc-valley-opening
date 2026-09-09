@@ -27,7 +27,6 @@ import {
 import {
   createSpaceXSequence,
   addAICampus,
-  createSoraStudio,
   createOpenClawTerrace,
 } from './ai-era';
 import {
@@ -864,7 +863,6 @@ export async function createEditableValley(
     ),
   );
   occupied.push(
-    createSoraStudio(world, { box, mesh, mat, sculpture, text, batch }, motion),
     createNFTCrash(world, { box, mesh, mat, sculpture, text, batch }, motion),
   );
   // Coherent districts with local variation; neighboring parcels avoid repeated silhouettes.
