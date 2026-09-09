@@ -15,6 +15,7 @@ import { sampleDaylight, CAMERA_HOLD } from './solar-motion';
 import { ShutterPass } from './shutter-pass';
 import { constructionStage, type CraneDelivery } from './construction-timeline';
 import { createFintocHQ } from './fintoc-hq';
+import { createFintocIdentity } from './fintoc-identity';
 import { createCoffeeKiosk } from './coffee-kiosk';
 import { createNeighborhoodBuilding } from './neighborhood-buildings';
 import { createOpeningCampuses } from './opening-campus';
@@ -68,7 +69,6 @@ export async function createEditableValley(
   const assetNames = [
     'fintoc-logo',
     'old-fintoc-logo',
-    'old-fintoc-symbol',
     'ebay-1999-2012',
     'intel-2006-2020',
     'myspace-2008',
@@ -423,42 +423,6 @@ export async function createEditableValley(
   }
   const motion = createMotion();
   const deliveries: CraneDelivery[] = [];
-  function logoPieces(logo: THREE.Group, start: number, old = false) {
-    const parts = logo.children.filter(
-      (o): o is THREE.Mesh => o instanceof THREE.Mesh,
-    );
-    // Center the genuine SVG shapes so each letter/bar rotates about its own pivot.
-    parts.sort((a, b) => {
-      a.geometry.computeBoundingBox();
-      b.geometry.computeBoundingBox();
-      return a.geometry.boundingBox!.min.x - b.geometry.boundingBox!.min.x;
-    });
-    parts.forEach((part, i) => {
-      const center = part.geometry.boundingBox!.getCenter(new THREE.Vector3());
-      part.geometry.translate(-center.x, -center.y, -center.z);
-      part.name = `${old ? '2021' : '2024'} Fintoc · component ${i + 1}`;
-      motion.track(part, (t) => {
-        const born = smooth(start + i * 0.055, start + 0.65 + i * 0.055, t);
-        const split = old ? smooth(1.85 + i * 0.025, 2.9 + i * 0.025, t) : 0;
-        const gone = old ? smooth(2.55 + i * 0.025, 3.05 + i * 0.025, t) : 0;
-        const spread = i - (parts.length - 1) / 2;
-        part.position.set(
-          center.x + spread * (old ? split * 2 : (1 - born) * 1.9),
-          center.y +
-            (old
-              ? (1 - born) * -5 + Math.sin(split * Math.PI) * 8 + split * 8
-              : (1 - born) * (8 + (i % 3) * 2)),
-          center.z + ((i % 3) - 1) * (old ? split * 6 : (1 - born) * 5),
-        );
-        part.rotation.set(
-          old ? split * (i % 2 ? 1 : -1) : (1 - born) * 0.4,
-          0,
-          old ? split * spread * 0.35 : (1 - born) * spread * 0.15,
-        );
-        part.scale.setScalar(Math.max(0.001, born * (1 - gone)));
-      });
-    });
-  }
   const occupied: { x: number; z: number; w: number; d: number }[] = [];
   const xRoads = [-198, -168, -138, -108, -78, -48, 45, 77, 109, 141, 173, 205],
     zRoads = [-114, -84, -55, -27, 35, 68, 100, 132, 164, 196, 228, 260];
@@ -770,24 +734,11 @@ export async function createEditableValley(
         { box, mesh, mat, batch },
         motion,
       );
-      const logo = sculpture(
-        'fintoc-logo',
-        anchors.logoWidth,
-        0.65,
-        fintocMat,
-        true,
-      );
-      logo.position.set(0, anchors.roof.y, anchors.roof.z);
-      g.add(logo);
-      logoPieces(logo, 4.9);
+      createFintocIdentity(g, anchors, fintocMat, { box, sculpture }, motion);
     }
     if (b.id === 'startup') {
-      const logo = sculpture('old-fintoc-logo', 17, 0.65, undefined, true);
-      logo.position.set(0, b.height + 1, b.depth / 2 - 0.5);
-      g.add(logo);
-      logoPieces(logo, 0.05, true);
       const expansion = new THREE.Group();
-      expansion.name = 'Fintoc expansion · two new floors';
+      expansion.name = 'Startup office · two new floors';
       expansion.position.y = b.height + 0.65;
       office(expansion, b.width + 3, b.depth + 1, 6.3, facade, false);
       batch(expansion);
@@ -796,13 +747,8 @@ export async function createEditableValley(
         expansion,
         (t) => (expansion.scale.y = Math.max(0.001, smooth(2.35, 3.55, t))),
       );
-      const newLogo = sculpture('fintoc-logo', 28, 0.85, fintocMat, true);
-      newLogo.name = 'Fintoc · new identity assembled larger';
-      newLogo.position.set(0, b.height + 8.1, b.depth / 2 + 0.3);
-      g.add(newLogo);
-      logoPieces(newLogo, 2.6);
       const terrace = new THREE.Group();
-      terrace.name = 'Fintoc rooftop team';
+      terrace.name = 'Startup office · rooftop team';
       g.add(terrace);
       for (let p = 0; p < 8; p++)
         person(terrace, -8 + p * 2.2, b.height + 0.8, -2 + (p % 2) * 2, p);
@@ -1019,7 +965,7 @@ export async function createEditableValley(
   }
   // Authentic extruded billboards, with framing and supporting steel.
   const signs = new THREE.Group();
-  signs.name = 'Fintoc billboards';
+  signs.name = 'Street billboards';
   world.add(signs);
   function billboard(
     x: number,
@@ -1044,7 +990,6 @@ export async function createEditableValley(
     batch(g);
     return g;
   }
-  billboard(-36, -10, 20, 7, 'fintoc-logo', '#eae0cd', -0.25);
   billboard(-62, -40, 17, 6, 'facebook-lettering', '#e4ddd0');
   // Real letter-shaped buildings: red roofs, ivory walls, and glazed perimeter floors.
   let titleGroup = new THREE.Group();

@@ -40,7 +40,7 @@ export const DEFAULT_CONFIG: ValleyConfig = {
     asphalt: '#292a27',
     facade: '#e4d9c8',
     title: '#ee172b',
-    fintoc: '#10191e',
+    fintoc: '#080808',
   },
   camera: { azimuth: 46, elevation: 27, zoom: 1 },
   lighting: {
@@ -68,7 +68,7 @@ export const DEFAULT_CONFIG: ValleyConfig = {
     },
     {
       id: 'startup',
-      name: 'Fintoc · primera sede',
+      name: 'Oficina en expansión',
       x: -14,
       z: 116,
       width: 22,
@@ -194,6 +194,9 @@ export function readConfig(value: unknown): ValleyConfig {
     if (typeof col === 'string' && /^#[0-9a-f]{6}$/i.test(col))
       c.palette[key] = col;
   }
+  // The former default colored the letters; the same control now colors the sign panel.
+  if (c.palette.fintoc.toLowerCase() === '#10191e')
+    c.palette.fintoc = '#080808';
   for (const key of ['azimuth', 'elevation', 'zoom'] as const)
     c.camera[key] =
       number(

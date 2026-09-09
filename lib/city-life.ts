@@ -1028,12 +1028,6 @@ export function createCityLife(
         mat('#4d5061'),
       );
       batch(badge);
-    } else {
-      const logo = sculpture('old-fintoc-symbol', 4, 0.05, '#eee6d8');
-      logo.traverse((o) => {
-        if (o instanceof THREE.Mesh) o.geometry = wrap(o.geometry, 7, 0.1);
-      });
-      envelope.add(logo);
     }
     const flame = group(flight, 'Burner flame', 0, 1.8, 0);
     mesh(flame, new THREE.ConeGeometry(0.23, 1.5, 8), mat('#f8b32c'));

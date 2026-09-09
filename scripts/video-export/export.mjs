@@ -6,7 +6,7 @@ import { createServer } from 'vite';
 
 const root = process.cwd();
 const work = path.join(root, 'work/video-export');
-const output = path.join(root, 'outputs/fintoc-valley-v8-4k.mp4');
+const output = path.join(root, 'outputs/fintoc-valley-v9-4k.mp4');
 const probe = process.argv.includes('--probe');
 const width = probe ? 1920 : 3840, height = probe ? 1080 : 2160;
 const fps = 24, total = 262;
@@ -84,7 +84,7 @@ try {
     return Buffer.from(await evaluate(`window.__renderFrame(${t},${probe ? 3 : 8})`),'base64');
   }
   if(probe) {
-    for(const i of [0,36,60,84,108,132,156,180,204,216,240]) {
+    for(const i of [0,60,120,138,144,150,159,171,183,240]) {
       const start = Date.now();
       await writeFile(path.join(work,'samples',`frame-${String(i).padStart(4,'0')}.png`),await frame(i/fps));
       console.log(`Probe frame ${i}: ${((Date.now()-start)/1000).toFixed(2)}s`);
@@ -118,9 +118,38 @@ try {
         const techActors = names.map((name,i) => ({name,i})).filter(n => /NVIDIA · office rooftop identity|NFT . Web3 · speculative domino crash|NFT · falling collectible|Web3 · collapsing marquee|Web3 · spilled token|NFT · clearance sign|Waymo · robotaxi/.test(n.name));
         const epochActors = names.map((name,i) => ({name,i})).filter(n => /openai · rooftop identity|anthropic · rooftop identity|Sora · studio shutdown|OpenClaw · small terrace plaque/.test(n.name));
         const craneChildren = names.map((name,i) => ({name,i})).filter(n => /Traveling trolley|Variable hoist cable|Facade panel carried|Roof finishing piece/.test(n.name));
+        const identity = names.indexOf('Fintoc · single identity');
+        const oldIdentity = names.indexOf('Fintoc · 2021 identity');
+        const newIdentity = names.indexOf('Fintoc · current identity');
+        const identityParts = names.map((name,i) => ({name,i})).filter(n => /^(2021|2024) Fintoc · component/.test(n.name));
+        const oneFintocLocation = names.filter(n=>n==='Fintoc · single identity').length===1 &&
+          json.nodes[identity]?.children?.includes(oldIdentity) && json.nodes[identity]?.children?.includes(newIdentity) &&
+          !names.some(n=>/Fintoc billboards|Fintoc · primera sede|Fintoc · new identity assembled larger|old-fintoc-symbol/.test(n));
+        const whiteFintocLetters = json.materials.filter(m=>m.name==='Fintoc · white lettering').some(m=>(m.pbrMetallicRoughness.baseColorFactor || [1,1,1,1]).slice(0,3).every(c=>c===1));
+        const panel = json.nodes[names.indexOf('Fintoc · black sign panel')];
+        const panelMaterial = json.materials[json.meshes[panel.mesh].primitives[0].material];
+        const blackFintocPanel = panelMaterial.pbrMetallicRoughness.baseColorFactor.slice(0,3).every(c=>c<0.01);
+        const binaryStart = 28 + view.getUint32(12,true);
+        const values = index => {
+          const a = json.accessors[index], b = json.bufferViews[a.bufferView];
+          return new Float32Array(bytes.buffer,binaryStart+(b.byteOffset||0)+(a.byteOffset||0),a.count*(a.type==='VEC3'?3:1));
+        };
+        const partScales = (year,t) => identityParts.filter(n=>n.name.startsWith(year)).map(n=>{
+          const channel=json.animations[0].channels.find(c=>c.target.node===n.i && c.target.path==='scale');
+          const sampler=json.animations[0].samplers[channel.sampler];
+          const times=values(sampler.input), scales=values(sampler.output);
+          let closest=0;
+          for(let i=1;i<times.length;i++) if(Math.abs(times[i]-t)<Math.abs(times[closest]-t)) closest=i;
+          return scales[closest*3];
+        });
+        const oldShown=partScales('2021',6).every(v=>v>0.99);
+        const oldGone=partScales('2021',6.86).every(v=>v<0.002);
+        const newWaiting=partScales('2024',6.86).every(v=>v<0.002);
+        const newComplete=partScales('2024',7.65).every(v=>v>0.99);
+        const fintocTransition = identityParts.length>0 && identityParts.every(n=>animated.has(n.i)) && oldShown && oldGone && newWaiting && newComplete;
         engine.render(4.7,3);
         window.__afterExport = engine.canvas.toDataURL();
-        return {seekStable,titleRestored,hazeChangesImage,hazeRestored,exportRestored:expected===engine.canvas.toDataURL(),
+        return {oneFintocLocation,whiteFintocLetters,blackFintocPanel,fintocTransition,seekStable,titleRestored,hazeChangesImage,hazeRestored,exportRestored:expected===engine.canvas.toDataURL(),
           glbBytes:bytes.length,channels:json.animations[0].channels.length,
           images:json.images?.length || 0,
           storyActors:storyActors.map(n=>({name:n.name,animated:animated.has(n.i)})),
@@ -132,7 +161,7 @@ try {
       })()`);
       console.log('Verification:',JSON.stringify(check));
       for(const phase of ['before','after']) await writeFile(path.join(work,phase+'-export.png'),Buffer.from(await evaluate(`window.__${phase}Export.split(',')[1]`),'base64'));
-      if(!check.seekStable || !check.titleRestored || !check.hazeChangesImage || !check.hazeRestored || !check.exportRestored || !check.fusionAbsent || check.storyActors.length !== 31 || check.storyActors.some(n=>!n.animated) || check.techActors.length !== 24 || check.techActors.some(n=>!n.animated) || check.epochActors.length !== 4 || check.epochActors.some(n=>!n.animated) || check.texturedRoles.length !== 10 || check.craneChildren.some(n=>!n.animated && n.name!=='Roof finishing piece')) throw new Error('Animation verification failed');
+      if(!check.oneFintocLocation || !check.whiteFintocLetters || !check.blackFintocPanel || !check.fintocTransition || !check.seekStable || !check.titleRestored || !check.hazeChangesImage || !check.hazeRestored || !check.exportRestored || !check.fusionAbsent || check.storyActors.length !== 31 || check.storyActors.some(n=>!n.animated) || check.techActors.length !== 24 || check.techActors.some(n=>!n.animated) || check.epochActors.length !== 4 || check.epochActors.some(n=>!n.animated) || check.texturedRoles.length !== 10 || check.craneChildren.some(n=>!n.animated && n.name!=='Roof finishing piece')) throw new Error('Animation verification failed');
       await writeFile(path.join(work,'verification.json'),JSON.stringify(check,null,2));
       const pieces = [];
       for(let start=0;start<check.glbBytes;start+=49152) {

@@ -811,7 +811,7 @@ export default function Home() {
                       ['asphalt', 'Calles'],
                       ['facade', 'Edificios del entorno'],
                       ['title', 'Letras del título'],
-                      ['fintoc', 'Logo Fintoc'],
+                      ['fintoc', 'Fondo Fintoc'],
                     ] as const
                   ).map(([key, label]) => (
                     <label className="color-field" key={key}>
