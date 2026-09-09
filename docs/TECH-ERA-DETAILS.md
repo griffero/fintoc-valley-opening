@@ -1,6 +1,6 @@
-# Waymo, NVIDIA y cronología visual · v10
+# Waymo, NVIDIA y cronología visual · v11
 
-La escena recupera la arquitectura y el nivel de detalle de las versiones anteriores. Se elimina la planta de fusión completa. NVIDIA usa el mismo edificio de oficinas claro, ventanas por piso y techo plano que sus vecinos: 23 unidades de ancho y 16 de alto, con un letrero normal en el techo. Yahoo conserva su nueva ubicación en el edificio este. Fintoc tiene una sola placa negra sobre la sede: las letras blancas cambian de la identidad antigua a la actual.
+La escena recupera la arquitectura y el nivel de detalle de las versiones anteriores. Se elimina la planta de fusión completa. NVIDIA usa el mismo edificio de oficinas claro, ventanas por piso y techo plano que sus vecinos: 23 unidades de ancho y 16 de alto, con el nombre integrado en la fachada superior y el ojo en relieve sobre la cubierta. Yahoo conserva su nueva ubicación en el edificio este. Fintoc tiene una sola placa negra sobre la sede: las letras blancas cambian de la identidad antigua a la actual.
 
 ## Orden del relato
 
@@ -13,7 +13,7 @@ Los tiempos están centralizados en `lib/story-timing.ts`:
 | 2,9–4,03 s | Twitter se pliega y aparece SpaceX; el cohete despega desde 4,47 s |
 | 4,5–5,2 s | Aparecen OpenAI y Anthropic; luego sus equipos de cómputo |
 | 5,15–7,60 s | Logo antiguo de Fintoc, desarme y ensamblado de la identidad actual en la misma sede |
-| 5,35–5,75 s | Se instala el letrero de NVIDIA sobre un edificio convencional |
+| 5,35–5,75 s | Se instala la identidad de NVIDIA en la fachada y cubierta de un edificio convencional |
 | 6–6,91 s | Entran progresivamente ocho Waymos al tráfico |
 | 7,3–7,54 s | Aparecen las tres langostas de OpenClaw |
 

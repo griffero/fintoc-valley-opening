@@ -48,8 +48,8 @@ export function sampleDaylight(
     offset,
     rotation,
     color,
-    sunFactor: 1 + (0.02 - 0.04 * roofPhase) * envelope * strength,
-    ambientFactor: 1 + (0.01 - 0.02 * roofPhase) * envelope * strength,
+    sunFactor: 1 + (0.06 - 0.12 * roofPhase) * envelope * strength,
+    ambientFactor: 1 + (-0.02 + 0.04 * roofPhase) * envelope * strength,
     hazeFactor: 1 + 0.12 * envelope * (1 - roofPhase),
   };
 }

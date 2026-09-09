@@ -6,7 +6,7 @@ import { createServer } from 'vite';
 
 const root = process.cwd();
 const work = path.join(root, 'work/video-export');
-const output = path.join(root, 'outputs/fintoc-valley-v10-4k.mp4');
+const output = path.join(root, 'outputs/fintoc-valley-v11-4k.mp4');
 const probe = process.argv.includes('--probe');
 const width = probe ? 1920 : 3840, height = probe ? 1080 : 2160;
 const fps = 24, total = 262;
@@ -84,7 +84,7 @@ try {
     return Buffer.from(await evaluate(`window.__renderFrame(${t},${probe ? 3 : 8})`),'base64');
   }
   if(probe) {
-    for(const i of [0,60,120,138,144,150,159,171,183,240]) {
+    for(const i of [0,36,60,120,144,171,183,240]) {
       const start = Date.now();
       await writeFile(path.join(work,'samples',`frame-${String(i).padStart(4,'0')}.png`),await frame(i/fps));
       console.log(`Probe frame ${i}: ${((Date.now()-start)/1000).toFixed(2)}s`);
@@ -115,9 +115,10 @@ try {
         const names = json.nodes.map(n => n.name || '');
         const animated = new Set(json.animations.flatMap(a => a.channels.map(c => c.target.node)));
         const storyActors = names.map((name,i) => ({name,i})).filter(n => /Twitter roundel|SpaceX wordmark|SpaceX rocket|Rocket exhaust|Launch smoke puff|OpenClaw lobster/.test(n.name));
-        const techActors = names.map((name,i) => ({name,i})).filter(n => /NVIDIA · office rooftop identity|NFT . Web3 · speculative domino crash|NFT · falling collectible|Web3 · collapsing marquee|Web3 · spilled token|NFT · clearance sign|Waymo · robotaxi/.test(n.name));
-        const epochActors = names.map((name,i) => ({name,i})).filter(n => /openai · rooftop identity|anthropic · rooftop identity|OpenClaw · small terrace plaque/.test(n.name));
+        const techActors = names.map((name,i) => ({name,i})).filter(n => /NVIDIA · architectural identity|NFT . Web3 · speculative domino crash|NFT · falling collectible|Web3 · collapsing marquee|Web3 · spilled token|NFT · clearance sign|Waymo · robotaxi/.test(n.name));
+        const epochActors = names.map((name,i) => ({name,i})).filter(n => /openai · architectural identity|anthropic · architectural identity|OpenClaw · small terrace plaque/.test(n.name));
         const craneChildren = names.map((name,i) => ({name,i})).filter(n => /Traveling trolley|Variable hoist cable|Facade panel carried|Roof finishing piece/.test(n.name));
+        const integratedBrands = json.nodes.map((n,i)=>({name:n.name,i,mount:n.extras?.brandMount})).filter(n=>n.mount);
         const identity = names.indexOf('Fintoc · single identity');
         const oldIdentity = names.indexOf('Fintoc · 2021 identity');
         const newIdentity = names.indexOf('Fintoc · current identity');
@@ -134,6 +135,17 @@ try {
           const a = json.accessors[index], b = json.bufferViews[a.bufferView];
           return new Float32Array(bytes.buffer,binaryStart+(b.byteOffset||0)+(a.byteOffset||0),a.count*(a.type==='VEC3'?3:1));
         };
+        const foliagePrimitives = json.meshes.flatMap(m=>m.primitives).filter(p=>json.materials[p.material]?.extras?.surfaceRole==='foliage');
+        const facetedFoliage = foliagePrimitives.length>0 && foliagePrimitives.every(p=>{
+          if(p.indices!==undefined || p.attributes.NORMAL===undefined) return false;
+          const normals=values(p.attributes.NORMAL);
+          for(let i=0;i<normals.length;i+=9) {
+            for(let axis=0;axis<3;axis++) {
+              if(Math.abs(normals[i+axis]-normals[i+3+axis])>1e-6 || Math.abs(normals[i+axis]-normals[i+6+axis])>1e-6) return false;
+            }
+          }
+          return true;
+        });
         const partScales = (year,t) => identityParts.filter(n=>n.name.startsWith(year)).map(n=>{
           const channel=json.animations[0].channels.find(c=>c.target.node===n.i && c.target.path==='scale');
           const sampler=json.animations[0].samplers[channel.sampler];
@@ -149,8 +161,8 @@ try {
         const fintocTransition = identityParts.length>0 && identityParts.every(n=>animated.has(n.i)) && oldShown && oldGone && newWaiting && newComplete;
         engine.render(4.7,3);
         window.__afterExport = engine.canvas.toDataURL();
-        return {soraAbsent: !names.some(name=>/sora|Studio clapperboard|Movie camera on tripod/i.test(name)),oneFintocLocation,whiteFintocLetters,blackFintocPanel,fintocTransition,seekStable,titleRestored,hazeChangesImage,hazeRestored,exportRestored:expected===engine.canvas.toDataURL(),
-          glbBytes:bytes.length,channels:json.animations[0].channels.length,
+        return {integratedBrands: integratedBrands.map(n=>({name:n.name,mount:n.mount,animated:animated.has(n.i)})),soraAbsent: !names.some(name=>/sora|Studio clapperboard|Movie camera on tripod/i.test(name)),oneFintocLocation,whiteFintocLetters,blackFintocPanel,fintocTransition,seekStable,titleRestored,hazeChangesImage,hazeRestored,exportRestored:expected===engine.canvas.toDataURL(),
+          facetedFoliage,foliagePrimitives:foliagePrimitives.length,glbBytes:bytes.length,channels:json.animations[0].channels.length,
           images:json.images?.length || 0,
           storyActors:storyActors.map(n=>({name:n.name,animated:animated.has(n.i)})),
           techActors:techActors.map(n=>({name:n.name,animated:animated.has(n.i)})),
@@ -160,8 +172,9 @@ try {
           craneChildren:craneChildren.map(n=>({name:n.name,animated:animated.has(n.i)}))};
       })()`);
       console.log('Verification:',JSON.stringify(check));
+      if(!check.facetedFoliage) throw new Error('GLB foliage lost its face normals');
       for(const phase of ['before','after']) await writeFile(path.join(work,phase+'-export.png'),Buffer.from(await evaluate(`window.__${phase}Export.split(',')[1]`),'base64'));
-      if(!check.soraAbsent || !check.oneFintocLocation || !check.whiteFintocLetters || !check.blackFintocPanel || !check.fintocTransition || !check.seekStable || !check.titleRestored || !check.hazeChangesImage || !check.hazeRestored || !check.exportRestored || !check.fusionAbsent || check.storyActors.length !== 29 || check.storyActors.some(n=>!n.animated) || check.techActors.length !== 24 || check.techActors.some(n=>!n.animated) || check.epochActors.length !== 3 || check.epochActors.some(n=>!n.animated) || check.texturedRoles.length !== 10 || check.craneChildren.some(n=>!n.animated && n.name!=='Roof finishing piece')) throw new Error('Animation verification failed');
+      if(check.integratedBrands.length !== 5 || check.integratedBrands.some(n=>!n.animated) || !check.soraAbsent || !check.oneFintocLocation || !check.whiteFintocLetters || !check.blackFintocPanel || !check.fintocTransition || !check.seekStable || !check.titleRestored || !check.hazeChangesImage || !check.hazeRestored || !check.exportRestored || !check.fusionAbsent || check.storyActors.length !== 29 || check.storyActors.some(n=>!n.animated) || check.techActors.length !== 24 || check.techActors.some(n=>!n.animated) || check.epochActors.length !== 3 || check.epochActors.some(n=>!n.animated) || check.texturedRoles.length !== 10 || check.craneChildren.some(n=>!n.animated && n.name!=='Roof finishing piece')) throw new Error('Animation verification failed');
       await writeFile(path.join(work,'verification.json'),JSON.stringify(check,null,2));
       const pieces = [];
       for(let start=0;start<check.glbBytes;start+=49152) {

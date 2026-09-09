@@ -42,8 +42,8 @@ const smooth = (a: number, b: number, t: number) => {
 };
 const colors = {
   roof: '#ece2d3',
-  glass: '#a0bbbf',
-  darkGlass: '#7c9ca5',
+  glass: '#859da0',
+  darkGlass: '#637d83',
   curb: '#d5cbbb',
   trunk: '#746141',
 };
@@ -133,7 +133,7 @@ export async function createEditableValley(
   controls.maxPolarAngle = Math.PI * 0.47;
   const ambient = new THREE.HemisphereLight(
     '#cbd8e8',
-    '#858d89',
+    '#988b79',
     config.lighting.ambient * 1.35,
   );
   scene.add(ambient);
@@ -240,8 +240,8 @@ export async function createEditableValley(
   const roadMat = createSurface(config.palette.asphalt, 'asphalt');
   const titleMat = new THREE.MeshStandardMaterial({
     color: new THREE.Color(config.palette.title).multiplyScalar(0.52),
-    roughness: 0.58,
-    metalness: 0.05,
+    roughness: 0.43,
+    metalness: 0.02,
   });
   const fintocMat = new THREE.MeshStandardMaterial({
     color: config.palette.fintoc,
@@ -826,6 +826,7 @@ export async function createEditableValley(
       addAICampus(
         g,
         b.id === 'campus' ? 'openai' : 'anthropic',
+        b.width,
         b.height,
         b.depth,
         { box, mesh, mat, sculpture, text, batch },
@@ -1159,7 +1160,7 @@ export async function createEditableValley(
               for (let level = 0; level < count; level++) {
                 const floor = floors[level].group;
                 const glass = mat(
-                  ['#829da0', '#76959a', '#9caea9'][(i + level) % 3],
+                  ['#607d7d', '#506b70', '#8c9d91'][(i + level) % 3],
                   'glass',
                 );
                 const vertical = row === 1 && i >= 2 && i <= 4;
@@ -1913,13 +1914,43 @@ export async function createEditableValley(
           tracks.filter((track) => exportedNodes.has(track.name.split('.')[0])),
         );
         const exporter = new GLTFExporter();
-        const file = await exporter.parseAsync(exportRoot, {
-          binary: true,
-          onlyVisible: true,
-          trs: true,
-          animations: [clip],
-        });
-        return new Blob([file as ArrayBuffer], { type: 'model/gltf-binary' });
+        // glTF has no flatShading material switch. Bake face normals for the
+        // faceted foliage, then restore the web geometry even if export fails.
+        const restored: { mesh: THREE.Mesh; geometry: THREE.BufferGeometry }[] =
+          [];
+        const faceted = new Map<THREE.BufferGeometry, THREE.BufferGeometry>();
+        try {
+          exportRoot.traverseVisible((node) => {
+            if (
+              !(node instanceof THREE.Mesh) ||
+              Array.isArray(node.material) ||
+              !(node.material instanceof THREE.MeshStandardMaterial) ||
+              !node.material.flatShading
+            )
+              return;
+            const original: THREE.BufferGeometry = node.geometry;
+            let geometry = faceted.get(original);
+            if (!geometry) {
+              geometry = original.index
+                ? original.toNonIndexed()
+                : original.clone();
+              geometry.computeVertexNormals();
+              faceted.set(original, geometry);
+            }
+            restored.push({ mesh: node, geometry: original });
+            node.geometry = geometry;
+          });
+          const file = await exporter.parseAsync(exportRoot, {
+            binary: true,
+            onlyVisible: true,
+            trs: true,
+            animations: [clip],
+          });
+          return new Blob([file as ArrayBuffer], { type: 'model/gltf-binary' });
+        } finally {
+          restored.forEach(({ mesh, geometry }) => (mesh.geometry = geometry));
+          faceted.forEach((geometry) => geometry.dispose());
+        }
       } finally {
         selection.visible = previousSelection;
         render(previousTime);

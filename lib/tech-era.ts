@@ -13,7 +13,7 @@ function group(parent: THREE.Object3D, name: string, x = 0, y = 0, z = 0) {
 }
 const show = (yes: boolean) => (yes ? 1 : 0.001);
 
-/** A restrained rooftop identity on the same office architecture as its neighbors. */
+/** Conventional office: name on the upper facade and an eye relief laid into the roof. */
 export function addNvidiaIdentity(
   parent: THREE.Group,
   w: number,
@@ -23,26 +23,32 @@ export function addNvidiaIdentity(
   motion: Motion,
 ) {
   const { box, mat, sculpture, batch } = kit;
-  const sign = group(
-    parent,
-    'NVIDIA · office rooftop identity',
-    0,
-    h + 0.85,
-    d * 0.27,
-  );
-  box(sign, 0, 0, 0, w, 4.7, 0.35, mat('#ece8db', 'paint'));
-  const eye = sculpture('nvidia-eye', 4.3, 0.2, '#76b900');
-  eye.position.set(-w * 0.35, 1.05, 0.22);
-  sign.add(eye);
-  const word = sculpture('nvidia-wordmark', w * 0.67, 0.24, '#202b26');
-  word.position.set(w * 0.13, 1.05, 0.22);
+  const sign = group(parent, 'NVIDIA · architectural identity');
+  sign.userData.brandMount = 'roof-relief-and-facade';
+  const stone = mat('#e4dac7');
+  box(parent, 0, h - 3.9, d / 2 + 0.075, w + 0.12, 3.85, 0.22, stone);
+  for (const side of [-1, 1])
+    box(
+      parent,
+      side * (w / 2 - 0.03),
+      h - 3.9,
+      d / 2 - 0.8,
+      0.18,
+      3.85,
+      1.9,
+      stone,
+    );
+  const word = sculpture('nvidia-wordmark', w * 0.8, 0.17, '#243027');
+  word.position.set(0, h - 3.58, d / 2 + 0.22);
   sign.add(word);
-  for (const x of [-w * 0.33, w * 0.33])
-    box(sign, x, -0.8, 0, 0.17, 0.9, 0.23, mat('#727d75', 'metal'));
+  const eye = sculpture('nvidia-eye', 8.5, 0.26, '#76b900');
+  eye.rotation.x = -Math.PI / 2;
+  eye.position.set(w * 0.08, h + 0.84, d * 0.31);
+  sign.add(eye);
   batch(sign);
   motion.track(sign, (t) => {
     const p = ease(STORY_TIMING.nvidia, STORY_TIMING.nvidia + 0.4, t);
-    sign.position.y = h + 0.85 - (1 - p) * 0.65;
+    sign.position.y = -(1 - p) * 0.35;
     sign.scale.setScalar(show(t >= STORY_TIMING.nvidia));
   });
 }

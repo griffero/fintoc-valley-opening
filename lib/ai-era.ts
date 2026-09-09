@@ -262,54 +262,71 @@ export function createSpaceXSequence(
 export function addAICampus(
   parent: THREE.Group,
   brand: 'openai' | 'anthropic',
+  w: number,
   h: number,
   d: number,
   kit: Kit,
   motion: Motion,
 ) {
   const { box, mat, sculpture, batch } = kit;
-  const sign = group(
-    parent,
-    `${brand} · rooftop identity`,
-    0,
-    h + 0.9,
-    d * 0.23,
-  );
-  const width = brand === 'openai' ? 20 : 23;
+  const sign = group(parent, `${brand} · architectural identity`);
+  sign.userData.brandMount =
+    brand === 'openai' ? 'roof-relief-and-facade' : 'cornice-lettering';
+  const openAI = brand === 'openai';
+  const upperRoof = 3 * Math.max(2.15, h / 3) + 0.94;
+  const faceZ = openAI ? d * 0.02 : d / 2;
+  const bandY = openAI ? upperRoof - 2.1 : h - 1.95;
+  const bandWidth = openAI ? w * 0.84 : w + 0.12;
+  // The lettering sits on a continuous architectural fascia, with returns at the corners.
   box(
-    sign,
+    parent,
     0,
-    0,
-    0,
-    width,
-    4.3,
-    0.35,
-    mat(brand === 'openai' ? '#eeeae0' : '#e9ddcb', 'paint'),
-  );
-  for (const x of [-width * 0.33, width * 0.33])
-    box(sign, x, -1.2, 0, 0.15, 1.3, 0.22, mat('#747e76', 'metal'));
-  const symbol = sculpture(
-    brand === 'openai' ? 'openai-blossom' : 'claude-spark',
-    3.1,
-    0.19,
-    brand === 'openai' ? '#1d2928' : '#d47758',
-  );
-  symbol.position.set(-width * 0.36, 0.58, 0.22);
-  sign.add(symbol);
-  const logo = sculpture(
-    brand === 'openai' ? 'openai-wordmark' : 'anthropic-wordmark',
-    brand === 'openai' ? 12.5 : 16.2,
+    bandY,
+    faceZ + 0.065,
+    bandWidth,
+    2.05,
     0.2,
+    mat(openAI ? '#e5dbc9' : '#e5d6c0'),
+  );
+  for (const side of [-1, 1])
+    box(
+      parent,
+      side * (bandWidth / 2 - 0.08),
+      bandY,
+      faceZ - 0.42,
+      0.16,
+      2.05,
+      1.1,
+      mat(openAI ? '#e5dbc9' : '#e5d6c0'),
+    );
+  const logo = sculpture(
+    openAI ? 'openai-wordmark' : 'anthropic-wordmark',
+    openAI ? w * 0.64 : w * 0.74,
+    0.14,
     '#222925',
   );
-  logo.position.set(2.1, brand === 'openai' ? 0.65 : 1.2, 0.22);
+  const letteringHeight = new THREE.Box3()
+    .setFromObject(logo)
+    .getSize(new THREE.Vector3()).y;
+  logo.scale.setScalar(Math.min(1, 1.62 / letteringHeight));
+  logo.position.set(openAI ? 0 : 1.3, bandY + 0.24, faceZ + 0.19);
   sign.add(logo);
+  const symbol = sculpture(
+    openAI ? 'openai-blossom' : 'claude-spark',
+    openAI ? 4.6 : 1.65,
+    openAI ? 0.26 : 0.17,
+    openAI ? '#1d2928' : '#d47758',
+  );
+  if (openAI) {
+    symbol.rotation.x = -Math.PI / 2;
+    symbol.position.set(w * 0.28, upperRoof + 0.12, -d * 0.07);
+  } else symbol.position.set(-w * 0.4, bandY + 0.2, faceZ + 0.2);
+  sign.add(symbol);
   batch(sign);
   motion.track(sign, (t) => {
-    const start =
-      brand === 'openai' ? STORY_TIMING.openAI : STORY_TIMING.anthropic;
+    const start = openAI ? STORY_TIMING.openAI : STORY_TIMING.anthropic;
     sign.scale.setScalar(visibleScale(t >= start));
-    sign.position.y = h + 0.9 - (1 - ease(start, start + 0.35, t)) * 0.5;
+    sign.position.y = -(1 - ease(start, start + 0.35, t)) * 0.35;
   });
   const servers = group(
     parent,

@@ -12,7 +12,7 @@ export function createSurfaceLibrary(
   const roughness: Record<SurfaceRole, number> = {
     masonry: 0.92,
     roof: 0.95,
-    glass: 0.36,
+    glass: 0.32,
     metal: 0.58,
     asphalt: 1,
     paving: 0.9,
@@ -26,6 +26,7 @@ export function createSurfaceLibrary(
     const reflective = role === 'glass' || role === 'metal' || role === 'solar';
     const material = new THREE.MeshStandardMaterial({
       color,
+      flatShading: role === 'foliage',
       roughness: roughness[role],
       metalness:
         role === 'metal'
@@ -37,12 +38,17 @@ export function createSurfaceLibrary(
       ...(reflective
         ? {
             envMap: environment,
-            envMapIntensity: role === 'metal' ? 0.34 : 0.46,
+            envMapIntensity:
+              role === 'metal' ? 0.34 : role === 'glass' ? 0.6 : 0.46,
           }
         : {}),
     });
     material.normalScale.setScalar(
-      role === 'glass' || role === 'solar' ? 0.06 : 0.45,
+      role === 'glass' || role === 'solar'
+        ? 0.06
+        : role === 'masonry'
+          ? 0.55
+          : 0.45,
     );
     material.name = `${role} · ${color}`;
     material.userData.surfaceRole = role;
@@ -58,6 +64,7 @@ export function outdoorEnvironment(renderer: THREE.WebGLRenderer) {
   const positions = geometry.getAttribute('position');
   const colors = new Float32Array(positions.count * 3);
   const ground = new THREE.Color('#687273');
+  const shadedHorizon = new THREE.Color('#9aa9ad');
   const horizon = new THREE.Color('#e4e9e7');
   const zenith = new THREE.Color('#7298ba');
   const cloud = new THREE.Color('#ffffff');
@@ -68,6 +75,12 @@ export function outdoorEnvironment(renderer: THREE.WebGLRenderer) {
     if (y < 0) color.copy(horizon).lerp(ground, Math.min(1, -y * 3.2));
     else {
       color.copy(horizon).lerp(zenith, Math.pow(y, 0.55));
+      // A cooler, shaded horizon on the opposite side gives adjacent glass faces different reflections.
+      const horizonBand = Math.exp(-Math.pow(y / 0.28, 2));
+      color.lerp(
+        shadedHorizon,
+        horizonBand * (0.16 + 0.14 * Math.cos(angle + 0.7)),
+      );
       // Wide, soft cloud banks provide variation across adjacent glass planes.
       const bank = Math.exp(-Math.pow((y - 0.3) / 0.13, 2));
       color.lerp(cloud, bank * (0.52 + 0.4 * Math.sin(angle * 3 + 0.8)));

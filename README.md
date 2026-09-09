@@ -3,8 +3,9 @@
 Intro animada en Three.js inspirada en los títulos de *Silicon Valley*, con Fintoc como protagonista. La ciudad, los logos, la cámara y las animaciones se generan en 3D y siguen siendo editables. La música está incluida como archivo de audio.
 
 - [Abrir el editor publicado](https://fintoc-valley-opening.fintoc-7375.chatgpt.site/)
-- [Descargar el video v10 en 4K con música](https://github.com/griffero/fintoc-valley-opening/releases/tag/v10)
+- [Descargar el video v11 en 4K con música](https://github.com/griffero/fintoc-valley-opening/releases/tag/v11)
 - [Guía de edición y estructura del proyecto](docs/EDITING.md)
+- [Nueva auditoría del original: diez ajustes y marcas integradas](docs/REFERENCE-FINISH-AUDIT.md)
 - [Auditoría visual y cambios](docs/VISUAL-AUDIT.md)
 - [Diez mejoras de texturas y cuatro de iluminación](docs/TEXTURE-LIGHTING-AUDIT.md)
 - [SpaceX, OpenAI, Anthropic y OpenClaw](docs/AI-ERA-DETAILS.md)
@@ -38,7 +39,7 @@ Desde la raíz del repositorio:
 node scripts/video-export/export.mjs
 ```
 
-Genera `outputs/fintoc-valley-v10-4k.mp4`: 3840 × 2160, 24 fps, 262 fotogramas, ocho muestras temporales por fotograma y la pista de música incluida. Usa un perfil de Chrome separado y un servidor temporal en el puerto 3040; ambos se cierran al terminar.
+Genera `outputs/fintoc-valley-v11-4k.mp4`: 3840 × 2160, 24 fps, 262 fotogramas, ocho muestras temporales por fotograma y la pista de música incluida. Usa un perfil de Chrome separado y un servidor temporal en el puerto 3040; ambos se cierran al terminar.
 
 La ubicación predeterminada de Chrome es la habitual en macOS y ffmpeg se busca en el `PATH`. Para otras instalaciones, define `CHROME_PATH` y `FFMPEG_PATH`. Los ajustes de la exportación están en `scripts/video-export/render.html`; no se leen automáticamente desde el almacenamiento del editor en otro navegador.
 

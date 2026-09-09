@@ -87,7 +87,7 @@ export function createTextureLibrary(renderer: THREE.WebGLRenderer) {
           case 'masonry': {
             const pores = Math.max(0, fine - 0.89) * 0.45;
             color =
-              0.975 + (broad - 0.5) * 0.04 + (medium - 0.5) * 0.018 - pores;
+              0.975 + (broad - 0.5) * 0.065 + (medium - 0.5) * 0.03 - pores;
             rough = 0.87 + medium * 0.12;
             height = 0.5 + (medium - 0.5) * 0.03 - pores;
             break;
@@ -95,7 +95,12 @@ export function createTextureLibrary(renderer: THREE.WebGLRenderer) {
           case 'roof': {
             const seam = Math.max(line(u * 4, 0.018), line(v * 2, 0.014));
             const sheet = hash(Math.floor(u * 4), Math.floor(v * 2), 11);
-            color = 0.95 + sheet * 0.04 + (medium - 0.5) * 0.018 - seam * 0.055;
+            color =
+              0.94 +
+              sheet * 0.065 +
+              (medium - 0.5) * 0.018 +
+              (fine - 0.5) * 0.035 -
+              seam * 0.055;
             rough = 0.9 + broad * 0.09;
             height = 0.5 - seam * 0.13 + (fine - 0.5) * 0.014;
             break;
@@ -104,8 +109,8 @@ export function createTextureLibrary(renderer: THREE.WebGLRenderer) {
             const col = Math.floor(u * 5),
               row = Math.floor(v * 3);
             const pane = hash(col, row, 21);
-            const blind = pane > 0.68 && fract(v * 3) > 0.5 ? 0.04 : 0;
-            color = 0.9 + pane * 0.1 - blind;
+            const blind = pane > 0.8 && fract(v * 3) > 0.36 ? 0.085 : 0;
+            color = 0.76 + pane * 0.24 - blind;
             rough = 0.64 + pane * 0.32;
             height = 0.5 + (broad - 0.5) * 0.015;
             break;
@@ -119,8 +124,11 @@ export function createTextureLibrary(renderer: THREE.WebGLRenderer) {
           }
           case 'asphalt': {
             const patch = smooth(broad);
-            color = 0.94 + (patch - 0.5) * 0.09 + (fine - 0.5) * 0.06;
-            rough = 0.9 + medium * 0.1;
+            // Broad resurfacing bands, softened at their boundaries; no baked shadows or cracks.
+            const wear = noise(u, 0, 8, 32) - 0.5;
+            color =
+              0.94 + (patch - 0.5) * 0.09 + (fine - 0.5) * 0.06 + wear * 0.055;
+            rough = 0.84 + medium * 0.16;
             height = 0.5 + (fine - 0.5) * 0.08;
             break;
           }
@@ -129,7 +137,7 @@ export function createTextureLibrary(renderer: THREE.WebGLRenderer) {
             const stagger = u * 4 + (row % 2) * 0.5;
             const joint = Math.max(line(stagger, 0.022), line(v * 4, 0.022));
             const slab = hash(Math.floor(stagger) % 4, row, 6);
-            color = 0.945 + slab * 0.055 - joint * 0.1;
+            color = 0.93 + slab * 0.08 - joint * 0.14;
             rough = 0.86 + slab * 0.11;
             height = 0.5 - joint * 0.15 + (fine - 0.5) * 0.012;
             break;

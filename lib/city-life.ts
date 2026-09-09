@@ -435,27 +435,44 @@ export function createCityLife(
   parasol(social, -5, 9.8, -3, '#e4c32d');
   for (let i = 0; i < 15; i++)
     person(social, -7 + (i % 8) * 1.8, 9.8, 1 + Math.floor(i / 8) * 2.4, i);
-  const oldSign = group(social, 'Myspace billboard dismantling', 0, 10, 7.5);
-  box(oldSign, 0, 0, 0, 22, 4.9, 0.5, '#423674');
-  const socialLogo = sculpture('myspace-2008', 20, 0.22, '#eee9dc');
-  socialLogo.position.set(0, 0.6, 0.3);
+  // The social-network takeover happens in the top-floor facade, below the occupied terrace.
+  box(social, 0, 7.2, 8.34, 18.1, 2.35, 0.16, '#e3d8c5');
+  const oldSign = group(
+    social,
+    'Myspace · facade identity replacement',
+    0,
+    7.3,
+    8.47,
+  );
+  oldSign.userData.brandMount = 'facade-lettering';
+  const socialLogo = sculpture('myspace-2008', 11.4, 0.14, '#423674');
+  socialLogo.position.set(0, 0.1, 0);
   oldSign.add(socialLogo);
-  for (const x of [-7, 7]) box(oldSign, x, -1.4, 0, 0.18, 1.5, 0.2, steel);
-  const replacement = group(social, 'Facebook billboard assembly', 0, 10, 7.6);
-  box(replacement, 0, 0, 0, 23, 5, 0.5, '#344675');
-  const facebook = sculpture('facebook-lettering', 20, 0.3, '#eee9dc');
-  facebook.position.set(0, 0.75, 0.3);
+  const replacement = group(
+    social,
+    'Facebook · facade identity assembly',
+    0,
+    7.3,
+    8.47,
+  );
+  replacement.userData.brandMount = 'facade-lettering';
+  const facebook = sculpture('facebook-lettering', 11.4, 0.16, '#344675');
+  const facebookHeight = new THREE.Box3()
+    .setFromObject(facebook)
+    .getSize(new THREE.Vector3()).y;
+  facebook.scale.setScalar(Math.min(1, 1.95 / facebookHeight));
+  facebook.position.set(0, 0.12, 0);
   replacement.add(facebook);
   motion.track(oldSign, (t) => {
     const p = ease(2.6, 3.25, t);
-    oldSign.rotation.x = -p * Math.PI * 0.48;
-    oldSign.position.y = 10 - p * 1.2;
+    oldSign.position.y = 7.3 - p * 0.4;
+    oldSign.rotation.x = -p * 0.35;
     oldSign.scale.setScalar(Math.max(0.001, 1 - ease(3.05, 3.4, t)));
   });
   motion.track(replacement, (t) => {
     const p = ease(3.1, 3.9, t);
-    replacement.scale.y = Math.max(0.001, p);
-    replacement.position.y = 10;
+    replacement.scale.setScalar(Math.max(0.001, p));
+    replacement.position.y = 7.3 + (1 - p) * 0.45;
   });
   batch(oldSign);
   batch(replacement);
