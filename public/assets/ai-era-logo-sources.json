@@ -1,0 +1,65 @@
+{
+  "checked_on": "2026-09-08",
+  "assets": [
+    {
+      "label": "SpaceX wordmark",
+      "source_url": "https://www.spacex.com/main.d7d1373e1b935cc7.js",
+      "note": "Extracted unchanged path geometry and fill from spx-logo-svg component in the main script loaded by https://www.spacex.com/. Wide uppercase wordmark; X has an extended ascending arc.",
+      "viewBox": "0 0 147 19",
+      "path_count": 1,
+      "colors": [
+        "#F0F0FA"
+      ],
+      "sha256": "f0764cb97baf347932e377d734c0318d69c1ade2cb91c921b276178a560637a1",
+      "file": "spacex-wordmark.svg"
+    },
+    {
+      "label": "OpenAI Blossom",
+      "source_url": "https://cdn.openai.com/brand/OpenAI-Logos-2025.zip",
+      "note": "Current official downloadable brand ZIP. Six interlaced loops, single compound filled path; geometry preserved and full-canvas clip definitions omitted for SVGLoader.",
+      "viewBox": "0 0 721 721",
+      "path_count": 1,
+      "colors": [
+        "black"
+      ],
+      "sha256": "6e0a5f39eeef9e5ca74c3b264de7b2e09f2816db69b0e2914018f67a424290b7",
+      "file": "openai-blossom.svg"
+    },
+    {
+      "label": "OpenAI wordmark",
+      "source_url": "https://cdn.openai.com/brand/OpenAI-Logos-2025.zip",
+      "note": "Current official downloadable brand ZIP. OpenAI Sans wordmark, six glyph paths; generous native clear space. Geometry preserved and full-canvas clip omitted.",
+      "viewBox": "0 0 1604 718",
+      "path_count": 6,
+      "colors": [
+        "black"
+      ],
+      "sha256": "96477b906302188cdf8199bfbb31570dae9c54cc01fa6e487f85f402eff8f797",
+      "file": "openai-wordmark.svg"
+    },
+    {
+      "label": "Anthropic wordmark",
+      "source_url": "https://www-cdn.anthropic.com/ae59ca4ca194dac9c9dc3bc78c5829468cb0e8af.zip",
+      "note": "Unmodified SVG from official press kit reached through https://anthropic.com/press-kit, linked by https://www.anthropic.com/news. Wide uppercase geometric wordmark, 1 compound path.",
+      "viewBox": "0 0 590 68",
+      "path_count": 1,
+      "colors": [
+        "#141413"
+      ],
+      "sha256": "56cc8de50f5c863520c7ae24464a8b2fd5c2f66f9063b9790aff8c37b4a0a554",
+      "file": "anthropic-wordmark.svg"
+    },
+    {
+      "label": "Claude Spark",
+      "source_url": "https://www-cdn.anthropic.com/ae59ca4ca194dac9c9dc3bc78c5829468cb0e8af.zip",
+      "note": "Unmodified Claude Spark - Clay.svg from official Anthropic press kit. Irregular radial asterisk / starburst, one filled path.",
+      "viewBox": "0 0 94 94",
+      "path_count": 1,
+      "colors": [
+        "#D97757"
+      ],
+      "sha256": "6d53db4be375e899c937c26cf16684a80d6e869b1928d72b37748bef2560e219",
+      "file": "claude-spark.svg"
+    }
+  ]
+}

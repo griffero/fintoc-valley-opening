@@ -88,7 +88,7 @@ export const DEFAULT_CONFIG: ValleyConfig = {
     },
     {
       id: 'hooli',
-      name: 'Hooli',
+      name: 'Anthropic',
       x: 30,
       z: -40,
       width: 21,
@@ -132,7 +132,7 @@ export const DEFAULT_CONFIG: ValleyConfig = {
     },
     {
       id: 'twitter',
-      name: 'Twitter',
+      name: 'Twitter → SpaceX',
       x: 4,
       z: 55,
       width: 20,
@@ -143,7 +143,7 @@ export const DEFAULT_CONFIG: ValleyConfig = {
     },
     {
       id: 'campus',
-      name: 'Campus oeste',
+      name: 'OpenAI · campus oeste',
       x: -65,
       z: 10,
       width: 19,

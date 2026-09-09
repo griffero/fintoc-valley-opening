@@ -19,6 +19,12 @@ import { createCoffeeKiosk } from './coffee-kiosk';
 import { createNeighborhoodBuilding } from './neighborhood-buildings';
 import { createOpeningCampuses } from './opening-campus';
 import {
+  createSpaceXSequence,
+  addAICampus,
+  createSoraStudio,
+  createOpenClawTerrace,
+} from './ai-era';
+import {
   createSurfaceLibrary,
   surfaceGeometry,
   outdoorEnvironment,
@@ -68,6 +74,11 @@ export async function createEditableValley(
     'yahoo-lettering',
     'hp',
     'think-logo',
+    'spacex-wordmark',
+    'openai-blossom',
+    'openai-wordmark',
+    'anthropic-wordmark',
+    'claude-spark',
   ];
   const svgs = new Map<string, ReturnType<SVGLoader['parse']>>();
   await Promise.all(
@@ -806,8 +817,7 @@ export async function createEditableValley(
       g.add(logo);
       cylinder(g, 8, b.height + 0.8, -3, 3, 1.5, colors.roof, 40);
     }
-    if (b.id === 'hooli')
-      text('hooli', 4.9, 0.9, '#c4d528', g, 0, b.height + 1, b.depth / 2 - 0.6);
+
     if (b.id === 'hp') {
       const pad = new THREE.Mesh(
         new THREE.RingGeometry(3.5, 3.7, 50),
@@ -837,16 +847,31 @@ export async function createEditableValley(
       logo.position.set(0, b.height + 1.15, b.depth / 2);
       g.add(logo);
     }
-    if (b.id === 'twitter') {
-      const disc = cylinder(g, 0, b.height + 1, 0, 4.8, 0.55, '#eee9dc', 40);
-      disc.rotation.x = Math.PI / 2;
-      disc.position.set(0, b.height + 5, b.depth / 2);
-      const logo = sculpture('twitter-bird', 7, 0.3, '#39a7c4');
-      logo.position.set(0, b.height + 2.2, b.depth / 2 + 0.5);
-      g.add(logo);
-      for (const x of [-2, 2])
-        box(g, x, b.height + 0.6, b.depth / 2 - 0.2, 0.23, 3, 0.23, '#737b74');
-    }
+    if (b.id === 'twitter')
+      createSpaceXSequence(
+        g,
+        b.height,
+        b.depth,
+        { box, mesh, mat, sculpture, text, batch },
+        motion,
+      );
+    if (b.id === 'campus' || b.id === 'hooli')
+      addAICampus(
+        g,
+        b.id === 'campus' ? 'openai' : 'anthropic',
+        b.height,
+        b.depth,
+        { box, mesh, mat, sculpture, text, batch },
+        motion,
+      );
+    if (b.id === 'campus')
+      createOpenClawTerrace(
+        g,
+        b.height,
+        b.depth,
+        { box, mesh, mat, sculpture, text, batch },
+        motion,
+      );
     if (b.id === 'campus') {
       const terraceY = Math.max(2.15, b.height / 3) + 0.55;
       box(g, -2, terraceY, b.depth * 0.37, 9, 0.1, 1.8, '#40a5b6');
@@ -869,6 +894,9 @@ export async function createEditableValley(
       motion,
       deliveries,
     ),
+  );
+  occupied.push(
+    createSoraStudio(world, { box, mesh, mat, sculpture, text, batch }, motion),
   );
   // Coherent districts with local variation; neighboring parcels avoid repeated silhouettes.
   const neighborhood: { x: number; z: number; family: number }[] = [];

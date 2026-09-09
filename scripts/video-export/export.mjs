@@ -6,13 +6,13 @@ import { createServer } from 'vite';
 
 const root = process.cwd();
 const work = path.join(root, 'work/video-export');
-const output = path.join(root, 'outputs/fintoc-valley-v4-4k.mp4');
+const output = path.join(root, 'outputs/fintoc-valley-v5-4k.mp4');
 const probe = process.argv.includes('--probe');
 const width = probe ? 1920 : 3840, height = probe ? 1080 : 2160;
 const fps = 24, total = 262;
 await mkdir(path.join(root, 'outputs'), {recursive:true});
 await mkdir(path.join(work, 'samples'), {recursive:true});
-const server = await createServer({configFile:false,root,publicDir:path.join(root,'public'),server:{host:'127.0.0.1',port:3040,strictPort:true,watch:{ignored:['**/chrome-profile/**','**/samples/**']}}});
+const server = await createServer({configFile:false,root,publicDir:path.join(root,'public'),server:{host:'127.0.0.1',port:3040,strictPort:true,watch:null}});
 await server.listen();
 let chrome, ws, encoder;
 const pending = new Map();
@@ -84,7 +84,7 @@ try {
     return Buffer.from(await evaluate(`window.__renderFrame(${t},${probe ? 3 : 8})`),'base64');
   }
   if(probe) {
-    for(const i of [0,24,60,84,120,144,168,240]) {
+    for(const i of [0,24,60,84,96,108,120,144,168,240]) {
       const start = Date.now();
       await writeFile(path.join(work,'samples',`frame-${String(i).padStart(4,'0')}.png`),await frame(i/fps));
       console.log(`Probe frame ${i}: ${((Date.now()-start)/1000).toFixed(2)}s`);
@@ -109,18 +109,20 @@ try {
         const json = JSON.parse(new TextDecoder().decode(bytes.slice(20,20+view.getUint32(12,true))));
         const names = json.nodes.map(n => n.name || '');
         const animated = new Set(json.animations.flatMap(a => a.channels.map(c => c.target.node)));
+        const storyActors = names.map((name,i) => ({name,i})).filter(n => /Twitter roundel|SpaceX wordmark|SpaceX rocket|Rocket exhaust|Launch smoke puff|Sora rooftop sign|Sora · closing roller shutter|OpenClaw lobster/.test(n.name));
         const craneChildren = names.map((name,i) => ({name,i})).filter(n => /Traveling trolley|Variable hoist cable|Facade panel carried|Roof finishing piece/.test(n.name));
         engine.render(4.7,3);
         window.__afterExport = engine.canvas.toDataURL();
         return {seekStable,titleRestored,exportRestored:expected===engine.canvas.toDataURL(),
           glbBytes:bytes.length,channels:json.animations[0].channels.length,
           images:json.images?.length || 0,
+          storyActors:storyActors.map(n=>({name:n.name,animated:animated.has(n.i)})),
           texturedRoles:[...new Set(json.materials.filter(m=>m.pbrMetallicRoughness?.baseColorTexture && m.normalTexture && m.pbrMetallicRoughness?.metallicRoughnessTexture).map(m=>m.extras?.surfaceRole).filter(Boolean))],
           craneChildren:craneChildren.map(n=>({name:n.name,animated:animated.has(n.i)}))};
       })()`);
       console.log('Verification:',JSON.stringify(check));
       for(const phase of ['before','after']) await writeFile(path.join(work,phase+'-export.png'),Buffer.from(await evaluate(`window.__${phase}Export.split(',')[1]`),'base64'));
-      if(!check.seekStable || !check.titleRestored || !check.exportRestored || check.texturedRoles.length !== 10 || check.craneChildren.some(n=>!n.animated && n.name!=='Roof finishing piece')) throw new Error('Animation verification failed');
+      if(!check.seekStable || !check.titleRestored || !check.exportRestored || check.storyActors.length !== 31 || check.storyActors.some(n=>!n.animated) || check.texturedRoles.length !== 10 || check.craneChildren.some(n=>!n.animated && n.name!=='Roof finishing piece')) throw new Error('Animation verification failed');
       await writeFile(path.join(work,'verification.json'),JSON.stringify(check,null,2));
       const pieces = [];
       for(let start=0;start<check.glbBytes;start+=49152) {
