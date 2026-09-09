@@ -3,12 +3,12 @@
 Intro animada en Three.js inspirada en los títulos de *Silicon Valley*, con Fintoc como protagonista. La ciudad, los logos, la cámara y las animaciones se generan en 3D y siguen siendo editables. La música está incluida como archivo de audio.
 
 - [Abrir el editor publicado](https://fintoc-valley-opening.fintoc-7375.chatgpt.site/)
-- [Descargar el video v6 en 4K con música](https://github.com/griffero/fintoc-valley-opening/releases/tag/v6)
+- [Descargar el video v7 en 4K con música](https://github.com/griffero/fintoc-valley-opening/releases/tag/v7)
 - [Guía de edición y estructura del proyecto](docs/EDITING.md)
 - [Auditoría visual y cambios](docs/VISUAL-AUDIT.md)
 - [Diez mejoras de texturas y cuatro de iluminación](docs/TEXTURE-LIGHTING-AUDIT.md)
 - [SpaceX, OpenAI, Anthropic, Sora y OpenClaw](docs/AI-ERA-DETAILS.md)
-- [Waymo, fusión, NFT/Web3 y NVIDIA](docs/TECH-ERA-DETAILS.md)
+- [Waymo, NVIDIA y cronología visual](docs/TECH-ERA-DETAILS.md)
 
 ## Ejecutar localmente
 
@@ -37,7 +37,7 @@ Desde la raíz del repositorio:
 node scripts/video-export/export.mjs
 ```
 
-Genera `outputs/fintoc-valley-v6-4k.mp4`: 3840 × 2160, 24 fps, 262 fotogramas, ocho muestras temporales por fotograma y la pista de música incluida. Usa un perfil de Chrome separado y un servidor temporal en el puerto 3040; ambos se cierran al terminar.
+Genera `outputs/fintoc-valley-v7-4k.mp4`: 3840 × 2160, 24 fps, 262 fotogramas, ocho muestras temporales por fotograma y la pista de música incluida. Usa un perfil de Chrome separado y un servidor temporal en el puerto 3040; ambos se cierran al terminar.
 
 La ubicación predeterminada de Chrome es la habitual en macOS y ffmpeg se busca en el `PATH`. Para otras instalaciones, define `CHROME_PATH` y `FFMPEG_PATH`. Los ajustes de la exportación están en `scripts/video-export/render.html`; no se leen automáticamente desde el almacenamiento del editor en otro navegador.
 
@@ -61,7 +61,7 @@ Agrega `--verify` para comprobar también la estabilidad al avanzar y retroceder
 | `lib/fintoc-hq.ts` | Sede final y terraza triangular |
 | `lib/coffee-kiosk.ts` | Puesto de café think |
 | `lib/city-life.ts` | Globos, grúas, maquinaria y actividad urbana |
-| `lib/tech-era.ts` | Robotaxis, fusión, caída de NFT/Web3 y megacampus NVIDIA |
+| `lib/tech-era.ts` | Robotaxis, caída de NFT/Web3 e identidad de NVIDIA |
 | `public/assets/` | Logos vectoriales y registros de sus fuentes |
 | `public/media/opening-soundtrack.m4a` | Música de la animación |
 

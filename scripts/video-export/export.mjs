@@ -6,7 +6,7 @@ import { createServer } from 'vite';
 
 const root = process.cwd();
 const work = path.join(root, 'work/video-export');
-const output = path.join(root, 'outputs/fintoc-valley-v6-4k.mp4');
+const output = path.join(root, 'outputs/fintoc-valley-v7-4k.mp4');
 const probe = process.argv.includes('--probe');
 const width = probe ? 1920 : 3840, height = probe ? 1080 : 2160;
 const fps = 24, total = 262;
@@ -84,7 +84,7 @@ try {
     return Buffer.from(await evaluate(`window.__renderFrame(${t},${probe ? 3 : 8})`),'base64');
   }
   if(probe) {
-    for(const i of [0,24,48,60,72,84,108,132,156,183,240]) {
+    for(const i of [0,36,60,84,108,132,156,180,204,216,240]) {
       const start = Date.now();
       await writeFile(path.join(work,'samples',`frame-${String(i).padStart(4,'0')}.png`),await frame(i/fps));
       console.log(`Probe frame ${i}: ${((Date.now()-start)/1000).toFixed(2)}s`);
@@ -110,7 +110,8 @@ try {
         const names = json.nodes.map(n => n.name || '');
         const animated = new Set(json.animations.flatMap(a => a.channels.map(c => c.target.node)));
         const storyActors = names.map((name,i) => ({name,i})).filter(n => /Twitter roundel|SpaceX wordmark|SpaceX rocket|Rocket exhaust|Launch smoke puff|Sora rooftop sign|Sora · closing roller shutter|OpenClaw lobster/.test(n.name));
-        const techActors = names.map((name,i) => ({name,i})).filter(n => /NVIDIA · compute tier|NVIDIA · giant processor crown|NVIDIA · spinning fan|Fusion · installed magnet|Fusion · suspended final magnet|NFT · falling collectible|Web3 · collapsing marquee|Web3 · spilled token|NFT · clearance sign|Waymo · robotaxi/.test(n.name));
+        const techActors = names.map((name,i) => ({name,i})).filter(n => /NVIDIA · office rooftop identity|NFT . Web3 · speculative domino crash|NFT · falling collectible|Web3 · collapsing marquee|Web3 · spilled token|NFT · clearance sign|Waymo · robotaxi/.test(n.name));
+        const epochActors = names.map((name,i) => ({name,i})).filter(n => /openai · rooftop identity|anthropic · rooftop identity|Sora · studio shutdown|OpenClaw · small terrace plaque/.test(n.name));
         const craneChildren = names.map((name,i) => ({name,i})).filter(n => /Traveling trolley|Variable hoist cable|Facade panel carried|Roof finishing piece/.test(n.name));
         engine.render(4.7,3);
         window.__afterExport = engine.canvas.toDataURL();
@@ -119,12 +120,14 @@ try {
           images:json.images?.length || 0,
           storyActors:storyActors.map(n=>({name:n.name,animated:animated.has(n.i)})),
           techActors:techActors.map(n=>({name:n.name,animated:animated.has(n.i)})),
+          epochActors:epochActors.map(n=>({name:n.name,animated:animated.has(n.i)})),
+          fusionAbsent: !names.some(name=>/Fusion power|Fusion ·|NVIDIA · compute tier|giant processor/.test(name)),
           texturedRoles:[...new Set(json.materials.filter(m=>m.pbrMetallicRoughness?.baseColorTexture && m.normalTexture && m.pbrMetallicRoughness?.metallicRoughnessTexture).map(m=>m.extras?.surfaceRole).filter(Boolean))],
           craneChildren:craneChildren.map(n=>({name:n.name,animated:animated.has(n.i)}))};
       })()`);
       console.log('Verification:',JSON.stringify(check));
       for(const phase of ['before','after']) await writeFile(path.join(work,phase+'-export.png'),Buffer.from(await evaluate(`window.__${phase}Export.split(',')[1]`),'base64'));
-      if(!check.seekStable || !check.titleRestored || !check.exportRestored || check.storyActors.length !== 31 || check.storyActors.some(n=>!n.animated) || check.techActors.length !== 40 || check.techActors.some(n=>!n.animated) || check.texturedRoles.length !== 10 || check.craneChildren.some(n=>!n.animated && n.name!=='Roof finishing piece')) throw new Error('Animation verification failed');
+      if(!check.seekStable || !check.titleRestored || !check.exportRestored || !check.fusionAbsent || check.storyActors.length !== 31 || check.storyActors.some(n=>!n.animated) || check.techActors.length !== 24 || check.techActors.some(n=>!n.animated) || check.epochActors.length !== 4 || check.epochActors.some(n=>!n.animated) || check.texturedRoles.length !== 10 || check.craneChildren.some(n=>!n.animated && n.name!=='Roof finishing piece')) throw new Error('Animation verification failed');
       await writeFile(path.join(work,'verification.json'),JSON.stringify(check,null,2));
       const pieces = [];
       for(let start=0;start<check.glbBytes;start+=49152) {

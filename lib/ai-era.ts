@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ease, type createMotion } from './city-life';
 import type { SurfaceRole } from './outdoor-materials';
+import { STORY_TIMING } from './story-timing';
 
 export type Kit = {
   box: (
@@ -49,6 +50,13 @@ function group(parent: THREE.Object3D, name: string, x = 0, y = 0, z = 0) {
   return g;
 }
 const visibleScale = (visible: boolean) => (visible ? 1 : 0.001);
+function shiftedMotion(motion: Motion, offset: number) {
+  return {
+    track(object: THREE.Object3D, update: (t: number) => void) {
+      motion.track(object, (t) => update(t - offset));
+    },
+  };
+}
 
 /** A deliberately playful Twitter → SpaceX replacement, followed by a roof launch. */
 export function createSpaceXSequence(
@@ -56,8 +64,9 @@ export function createSpaceXSequence(
   h: number,
   d: number,
   kit: Kit,
-  motion: Motion,
+  masterMotion: Motion,
 ) {
+  const motion = shiftedMotion(masterMotion, STORY_TIMING.twitterShift);
   const { box, mesh, mat, sculpture, batch } = kit;
   const old = group(parent, 'Twitter roundel · folds away', 0, h + 1, d / 2);
   const disc = mesh(
@@ -296,6 +305,12 @@ export function addAICampus(
   logo.position.set(2.1, brand === 'openai' ? 0.65 : 1.2, 0.22);
   sign.add(logo);
   batch(sign);
+  motion.track(sign, (t) => {
+    const start =
+      brand === 'openai' ? STORY_TIMING.openAI : STORY_TIMING.anthropic;
+    sign.scale.setScalar(visibleScale(t >= start));
+    sign.position.y = h + 0.9 - (1 - ease(start, start + 0.35, t)) * 0.5;
+  });
   const servers = group(
     parent,
     `${brand} · growing compute stacks`,
@@ -343,9 +358,14 @@ export function addAICampus(
   }
 }
 
-export const SORA_SITE = { x: 61, z: 87, w: 21, d: 14 };
+export const SORA_SITE = { x: 27.5, z: 50, w: 21, d: 14 };
 /** Sora's web/app closed April 26, 2026; this studio shutter is visual shorthand. */
-export function createSoraStudio(world: THREE.Group, kit: Kit, motion: Motion) {
+export function createSoraStudio(
+  world: THREE.Group,
+  kit: Kit,
+  masterMotion: Motion,
+) {
+  const motion = shiftedMotion(masterMotion, STORY_TIMING.soraClosureShift);
   const { box, mesh, mat, text, batch } = kit;
   const studio = group(
     world,
@@ -354,6 +374,9 @@ export function createSoraStudio(world: THREE.Group, kit: Kit, motion: Motion) {
     0,
     SORA_SITE.z,
   );
+  masterMotion.track(studio, (t) => {
+    studio.scale.setScalar(visibleScale(t >= STORY_TIMING.soraStudio));
+  });
   box(studio, 0, 0.08, 0, 21, 0.2, 14, mat('#bdb9a9', 'paving'));
   box(studio, 0, 0.3, -1.5, 18.4, 5.3, 9, mat('#e3e0d4'));
   box(studio, 0, 0.65, 3.04, 14.4, 4.2, 0.08, mat('#254348', 'glass'));
@@ -601,7 +624,9 @@ export function createOpenClawTerrace(
         deckY + Math.abs(Math.sin(t * 5 + i)) * 0.025,
         z,
       );
-      lobster.scale.setScalar(0.78);
+      lobster.scale.setScalar(
+        t >= STORY_TIMING.openClaw + i * 0.12 ? 0.78 : 0.001,
+      );
       lobster.rotation.y = -0.45 + i * 0.32 + Math.sin(t * 1.8 + i) * 0.09;
     });
   }
@@ -615,4 +640,7 @@ export function createOpenClawTerrace(
   box(plaque, 0, 0, 0, 4.1, 1.05, 0.15, mat('#e4e1d3', 'paint'));
   text('OpenClaw', 0.51, 0.045, '#b94633', plaque, 0, 0.25, 0.1);
   batch(plaque);
+  motion.track(plaque, (t) => {
+    plaque.scale.setScalar(visibleScale(t >= STORY_TIMING.openClaw));
+  });
 }

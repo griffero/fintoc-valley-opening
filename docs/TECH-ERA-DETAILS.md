@@ -1,20 +1,35 @@
-# Waymo, fusión, Web3 y NVIDIA · v6
+# Waymo, NVIDIA y cronología visual · v7
 
-Cuatro incorporaciones en geometría editable, con el recorrido de cámara y la música existentes:
+La escena recupera la arquitectura y el nivel de detalle de las versiones anteriores. Se elimina la planta de fusión completa. NVIDIA usa el mismo edificio de oficinas claro, ventanas por piso y techo plano que sus vecinos: 23 unidades de ancho y 16 de alto, con un letrero normal en el techo. Yahoo conserva su nueva ubicación en el edificio este. Fintoc recupera el logo sin la placa añadida para el anterior fondo oscuro.
 
-- **Waymo:** ocho robotaxis blancos circulan a 21–25 unidades por segundo en las calles existentes. Tienen ventanas oscuras, sensores en los guardabarros, plataforma de techo, domo con anillo azul y el símbolo oficial en las puertas. Sus posiciones y orientaciones forman parte de la animación GLB, igual que en el MP4. El diseño en miniatura toma como referencia el I-PACE de las [fotos oficiales de Waymo](https://waymo.com/media-resources/) y su [descripción del sistema de sensores](https://waymo.com/blog/2020/03/designing-5th-generation-waymo-driver/). Source: Waymo.
-- **Fusion power:** un reactor toroidal en un patio de construcción, junto al edificio de SpaceX. Diez bobinas de cobre se instalan entre 2,9 y 4,9 segundos; una última bobina queda suspendida de un puente grúa. El cartel frontal dice FUSION POWER / COMING SOON. Es una planta ficticia, sin atribuir una fecha de operación ni promesas a una empresa real.
-- **NFT/Web3:** tres coleccionables de pixel art propio caen como dominós desde 1,85 segundos, el cartel WEB3 se desploma y las fichas doradas se desparraman. Aparece CLEARANCE al final. Es una metáfora del desplome especulativo, sin cifras ni marcas de proyectos concretos.
-- **NVIDIA:** un centro de cómputo de 32 unidades de ancho ocupa el lugar del antiguo edificio Yahoo, con cuatro pisos escalonados, aletas de disipación, franjas verdes, ventiladores giratorios y un ojo gigante en el techo. La palabra NVIDIA queda bajo el borde del techo para entrar completa en el encuadre final. Los pisos se ensamblan entre 3,6 y 5,1 segundos; la corona aparece entre 4,9 y 5,55 segundos. Arquitectura ficticia inspirada en un procesador; los logos sí son los [vectores oficiales](https://www.nvidia.com/en-gb/about-nvidia/legal-info/logo-brand-usage/).
+## Orden del relato
 
-Yahoo se traslada al edificio este que antes no tenía marca. Fintoc conserva su sede y terraza; se agrega un fondo marfil detrás de su logo para mantener el contraste frente a la nueva fachada oscura de NVIDIA.
+Los tiempos están centralizados en `lib/story-timing.ts`:
 
-## Editar
+| Tiempo | Acción |
+| --- | --- |
+| 0–1,15 s | Ciudad tecnológica previa y nacimiento de la primera identidad Fintoc |
+| 1,15–3,4 s | Aparecen los NFT; las piezas caen como dominós, WEB3 se desploma y se desparraman las fichas |
+| 2,9–4,03 s | Twitter se pliega y aparece SpaceX; el cohete despega desde 4,47 s |
+| 4,5–5,2 s | Aparecen OpenAI y Anthropic; luego sus equipos de cómputo |
+| 5,35–5,75 s | Se instala el letrero de NVIDIA sobre un edificio convencional |
+| 6–6,91 s | Entran progresivamente ocho Waymos al tráfico |
+| 6,4 s | Aparece el estudio Sora abierto |
+| 7,3–7,54 s | Aparecen las tres langostas de OpenClaw |
+| 8–8,85 s | Sora baja la cortina y pliega el cartel |
 
-`lib/tech-era.ts` contiene los cuatro conjuntos, sus posiciones, colores, rutas y tiempos. `lib/scene-config.ts` mantiene las dimensiones iniciales. Se conservan los identificadores internos `yahoo` y `office` para abrir proyectos previos: el primero ahora corresponde a NVIDIA y el segundo a Yahoo. Al cargar una configuración vieja, solo se migran el ancho y color originales de Yahoo; los valores personalizados se respetan.
+Es una lectura por épocas y acontecimientos, no una cronología de fundación de empresas. Twitter → SpaceX sigue siendo una transición creativa. La progresión Fintoc y la construcción del título mantienen el hilo principal y transcurren en paralelo. El cierre de Sora ocurre después de la llegada de OpenClaw: [OpenClaw anunció ese nombre el 29 de enero de 2026](https://openclaw.ai/blog/introducing-openclaw), y la [web/app de Sora cerraron el 26 de abril de 2026](https://help.openai.com/en/articles/20001152-what-to-know-about-the-sora-discontinuation).
 
-Los SVG integrados, sus fuentes exactas y hashes están en `public/assets/tech-era-logo-sources.json`. Sus coordenadas originales se preservan y se extruyen como geometría, sin texturas rasterizadas de los logos.
+Para que el último acontecimiento siga dentro del encuadre, Sora pasa a una parcela pequeña junto a SpaceX, en x=27,5, z=50. La cámara, la luz y la música mantienen sus ajustes anteriores.
+
+## Assets y edición
+
+Los Waymos conservan sensores, domo de techo y símbolos oficiales en las puertas, con rutas a 21–25 unidades por segundo, acordes al timelapse. Referencias: [fotos oficiales](https://waymo.com/media-resources/) y [descripción del sistema de sensores](https://waymo.com/blog/2020/03/designing-5th-generation-waymo-driver/). Source: Waymo. Las piezas NFT son pixel art propio y una metáfora del desplome especulativo, sin cifras ni proyectos concretos.
+
+Los [vectores de NVIDIA](https://www.nvidia.com/en-gb/about-nvidia/legal-info/logo-brand-usage/) se extruyen en geometría. Los SVG integrados, fuentes exactas y hashes están en `public/assets/tech-era-logo-sources.json`. `lib/tech-era.ts` contiene identidades, coleccionables y robotaxis; `lib/ai-era.ts`, el resto de los acontecimientos. `lib/story-timing.ts` permite ajustar su orden sin cambiar la velocidad de la cámara ni de los autos.
+
+Los identificadores internos `yahoo` y `office` se mantienen para cargar proyectos anteriores: corresponden a NVIDIA y Yahoo, respectivamente. Los valores predeterminados del megacampus anterior migran a las dimensiones y color de oficinas normales; los valores personalizados se respetan.
 
 ## Verificación
 
-El renderizador comprueba reproducción determinista al saltar en el tiempo, restauración de la escena tras editar títulos y exportar, las diez familias de texturas PBR y las pistas de animación de los 40 actores nuevos. Se verifican también la carga de configuraciones anteriores y la conservación de modificaciones personales.
+El renderizador comprueba saltos temporales deterministas, restauración tras editar títulos y exportar, diez familias de texturas PBR, animación de los actores nuevos y ausencia de geometría de fusión/megacampus. También se verifica la migración de configuraciones sin perder ediciones personales.

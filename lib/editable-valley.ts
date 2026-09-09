@@ -19,8 +19,7 @@ import { createCoffeeKiosk } from './coffee-kiosk';
 import { createNeighborhoodBuilding } from './neighborhood-buildings';
 import { createOpeningCampuses } from './opening-campus';
 import {
-  createNvidiaCampus,
-  createFusionYard,
+  addNvidiaIdentity,
   createNFTCrash,
   createWaymoFleet,
 } from './tech-era';
@@ -730,17 +729,7 @@ export async function createEditableValley(
     world.add(g);
     g.position.set(b.x, 0, b.z);
     const facade = createSurface(b.color);
-    if (b.id === 'yahoo') {
-      createNvidiaCampus(
-        g,
-        b.width,
-        b.depth,
-        b.height,
-        facade,
-        { box, mesh, mat, sculpture, text, batch },
-        motion,
-      );
-    } else if (b.id === 'campus' || b.id === 'office') {
+    if (b.id === 'campus' || b.id === 'office') {
       createNeighborhoodBuilding(
         g,
         b.width,
@@ -785,19 +774,6 @@ export async function createEditableValley(
       );
       logo.position.set(0, anchors.roof.y, anchors.roof.z);
       g.add(logo);
-      const logoHeight = new THREE.Box3()
-        .setFromObject(logo)
-        .getSize(new THREE.Vector3()).y;
-      box(
-        g,
-        0,
-        anchors.roof.y - 0.2,
-        anchors.roof.z - 0.2,
-        anchors.logoWidth + 0.8,
-        logoHeight + 0.6,
-        0.25,
-        mat('#e9eee7', 'paint'),
-      ).name = 'Fintoc · ivory backing for legibility';
       logoPieces(logo, 4.9);
     }
     if (b.id === 'startup') {
@@ -849,6 +825,15 @@ export async function createEditableValley(
       g.add(logo);
       cylinder(g, 8, b.height + 0.8, -3, 3, 1.5, colors.roof, 40);
     }
+    if (b.id === 'yahoo')
+      addNvidiaIdentity(
+        g,
+        b.width,
+        b.depth,
+        b.height,
+        { box, mesh, mat, sculpture, text, batch },
+        motion,
+      );
 
     if (b.id === 'hp') {
       const pad = new THREE.Mesh(
@@ -929,7 +914,6 @@ export async function createEditableValley(
   );
   occupied.push(
     createSoraStudio(world, { box, mesh, mat, sculpture, text, batch }, motion),
-    createFusionYard(world, { box, mesh, mat, sculpture, text, batch }, motion),
     createNFTCrash(world, { box, mesh, mat, sculpture, text, batch }, motion),
   );
   // Coherent districts with local variation; neighboring parcels avoid repeated silhouettes.

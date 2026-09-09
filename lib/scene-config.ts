@@ -77,13 +77,13 @@ export const DEFAULT_CONFIG: ValleyConfig = {
     },
     {
       id: 'yahoo',
-      name: 'NVIDIA · megacampus',
+      name: 'NVIDIA',
       x: -12,
       z: -40,
-      width: 32,
+      width: 23,
       depth: 17,
-      height: 20,
-      color: '#25332f',
+      height: 16,
+      color: '#ded8ca',
       visible: true,
     },
     {
@@ -246,10 +246,11 @@ export function readConfig(value: unknown): ValleyConfig {
     if (typeof input.color === 'string' && /^#[0-9a-f]{6}$/i.test(input.color))
       b.color = input.color;
     if (typeof input.visible === 'boolean') b.visible = input.visible;
-    // Migrate only the former Yahoo defaults; preserve deliberate dimensions/colors.
-    if (b.id === 'yahoo' && input.name === 'Yahoo') {
-      if (input.width === 23) b.width = 32;
-      if (input.color === '#ded8ca') b.color = '#25332f';
+    // Restore office defaults from the previous oversized NVIDIA treatment.
+    if (b.id === 'yahoo' && input.name === 'NVIDIA · megacampus') {
+      if (input.width === 32) b.width = 23;
+      if (input.height === 20) b.height = 16;
+      if (input.color === '#25332f') b.color = '#ded8ca';
     }
   }
   return c;
