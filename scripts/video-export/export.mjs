@@ -6,7 +6,7 @@ import { createServer } from 'vite';
 
 const root = process.cwd();
 const work = path.join(root, 'work/video-export');
-const output = path.join(root, 'outputs/fintoc-valley-v12-4k.mp4');
+const output = path.join(root, 'outputs/fintoc-valley-v13-4k.mp4');
 const probe = process.argv.includes('--probe');
 const width = probe ? 1920 : 3840, height = probe ? 1080 : 2160;
 const fps = 24, total = 262;
@@ -174,7 +174,7 @@ try {
       console.log('Verification:',JSON.stringify(check));
       if(!check.facetedFoliage) throw new Error('GLB foliage lost its face normals');
       for(const phase of ['before','after']) await writeFile(path.join(work,phase+'-export.png'),Buffer.from(await evaluate(`window.__${phase}Export.split(',')[1]`),'base64'));
-      if(check.integratedBrands.length !== 5 || check.integratedBrands.some(n=>!n.animated) || !check.soraAbsent || !check.oneFintocLocation || !check.blackFintocLetters || !check.whiteFintocPanel || !check.fintocTransition || !check.seekStable || !check.titleRestored || !check.hazeChangesImage || !check.hazeRestored || !check.exportRestored || !check.fusionAbsent || check.storyActors.length !== 29 || check.storyActors.some(n=>!n.animated) || check.techActors.length !== 24 || check.techActors.some(n=>!n.animated) || check.epochActors.length !== 3 || check.epochActors.some(n=>!n.animated) || check.texturedRoles.length !== 10 || check.craneChildren.some(n=>!n.animated && n.name!=='Roof finishing piece')) throw new Error('Animation verification failed');
+      if(check.integratedBrands.length !== 5 || check.integratedBrands.some(n=>!n.animated) || !check.soraAbsent || !check.oneFintocLocation || !check.blackFintocLetters || !check.whiteFintocPanel || !check.fintocTransition || !check.seekStable || !check.titleRestored || !check.hazeChangesImage || !check.hazeRestored || !check.exportRestored || !check.fusionAbsent || check.storyActors.length !== 23 || check.storyActors.some(n=>!n.animated) || check.techActors.length !== 24 || check.techActors.some(n=>!n.animated) || check.epochActors.length !== 3 || check.epochActors.some(n=>!n.animated) || check.texturedRoles.length !== 10 || check.craneChildren.some(n=>!n.animated && n.name!=='Roof finishing piece')) throw new Error('Animation verification failed');
       await writeFile(path.join(work,'verification.json'),JSON.stringify(check,null,2));
       const pieces = [];
       for(let start=0;start<check.glbBytes;start+=49152) {

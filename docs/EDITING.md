@@ -16,7 +16,7 @@ The viewport is a real Three.js scene. Buildings, lettering, roads, cars, trees,
 
 - `lib/scene-config.ts`: defaults and validated project format.
 - `lib/editable-valley.ts`: geometry builders, logo extrusion, city generation, lighting, camera motion, scene animation and GLB export.
-- `lib/ai-era.ts`: Twitter/SpaceX sign replacement and rocket launch, OpenAI/Anthropic facade and roof identities, and three animated OpenClaw lobsters. See `docs/AI-ERA-DETAILS.md` for timing and factual references.
+- `lib/ai-era.ts`: Twitter/SpaceX sign replacement and rocket launch, OpenAI/Anthropic facade and roof identities, and one prominent animated OpenClaw lobster on the OpenAI pool terrace. See `docs/AI-ERA-DETAILS.md` for timing and factual references.
 - `lib/tech-era.ts`: eight Waymo robotaxis, NFT/Web3 domino collapse and a restrained NVIDIA sign on conventional office architecture. `lib/story-timing.ts` controls the sequence of eras. See `docs/TECH-ERA-DETAILS.md`.
 - `lib/city-life.ts`: curved and stepped campuses, balloon profiles and wrapped emblems, lattice cranes, excavators, construction yards, tents, rooftop activity, mixer truck and historical billboards. Coordinates, dimensions, colors and timing are editable here. `createMotion` drives both timeline seeking and exported position/rotation/scale tracks.
 - `lib/opening-campus.ts`: three connected foreground complexes with folded wings, solar roofs, a courtyard laboratory, parking bays and small internal drives. Their whole footprints are reserved before background buildings and vegetation are generated.

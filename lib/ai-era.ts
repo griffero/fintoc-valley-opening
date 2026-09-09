@@ -375,7 +375,7 @@ export function addAICampus(
   }
 }
 
-/** Small OpenClaw lobsters beside the OpenAI terrace pool. */
+/** One readable OpenClaw lobster in the open corner beside the OpenAI pool. */
 export function createOpenClawTerrace(
   parent: THREE.Group,
   h: number,
@@ -387,10 +387,11 @@ export function createOpenClawTerrace(
   const deckY = Math.max(2.15, h / 3) + 0.68;
   const shell = mat('#dd553b', 'paint'),
     dark = mat('#b53929', 'paint');
-  for (let i = 0; i < 3; i++) {
-    const x = -5.6 + i * 4.3,
-      z = d * 0.46;
+  for (let i = 0; i < 1; i++) {
+    const x = 5.7,
+      z = d * 0.375;
     const lobster = group(parent, `OpenClaw lobster ${i + 1}`, x, deckY, z);
+    lobster.userData.detail = 'OpenAI terrace lobster';
     function ellipsoid(
       p: THREE.Group,
       x: number,
@@ -509,20 +510,20 @@ export function createOpenClawTerrace(
     batch(lobster);
     motion.track(lobster, (t) => {
       lobster.position.set(
-        x + Math.sin(t * 2.4 + i * 2) * 0.16,
+        x + Math.sin(t * 2.4 + i * 2) * 0.07,
         deckY + Math.abs(Math.sin(t * 5 + i)) * 0.025,
         z,
       );
       lobster.scale.setScalar(
-        t >= STORY_TIMING.openClaw + i * 0.12 ? 0.78 : 0.001,
+        0.001 + 2.049 * ease(STORY_TIMING.openClaw, STORY_TIMING.openClaw + 0.28, t),
       );
-      lobster.rotation.y = -0.45 + i * 0.32 + Math.sin(t * 1.8 + i) * 0.09;
+      lobster.rotation.y = Math.PI / 2 + Math.sin(t * 1.8 + i) * 0.035;
     });
   }
   const plaque = group(
     parent,
     'OpenClaw · small terrace plaque',
-    5.4,
+    -6.3,
     deckY,
     d * 0.45,
   );
